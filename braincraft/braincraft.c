@@ -35,6 +35,49 @@ double sigmoid(double x) {
 }
 
 
+double relu(double x) {
+    return x > 0 ? x : 0;
+}
+
+
+double leaky_relu(double x, double alpha) {
+    return x > 0 ? x : alpha * x;
+}
+
+
+double prelu(double x, double alpha) {
+    return x > 0 ? x : alpha * x;
+}
+
+
+double elu(double x, double alpha) {
+    return x > 0 ? x : alpha * (exp(x) - 1);
+}
+
+
+void softmax(double* x, double* output, int size) {
+    double max = x[0];
+    for (int i = 1; i < size; ++i) {
+        if (x[i] > max) {
+            max = x[i];
+        }
+    }
+    double sum = 0.0;
+    for (int i = 0; i < size; ++i) {
+        output[i] = exp(x[i] - max);
+        sum += output[i];
+    }
+    for (int i = 0; i < size; ++i) {
+        output[i] /= sum;
+    }
+}
+
+
+double swish(double x) {
+    return x * sigmoid(x);
+}
+
+
 double compute_neuron_output(Neuron* neuron, double* inputs, int input_size) {
     double sum = 0.0;
     for (int i = 0; i < input_size; ++i) {
@@ -77,16 +120,6 @@ void forward(Layer* network, int num_layers, double* inputs, int input_size) {
 }
 
 
-double mean_squared_error(double* targets, double* outputs, int size) {
-    double sum = 0.0;
-    for (int i = 0; i < size; ++i) {
-        double error = targets[i] - outputs[i];
-        sum += error * error;
-    }
-    return sum / size;
-}
-
-
 void backpropagate(Neuron* neurons, double* inputs, double* targets, int input_size, int num_neurons, int output_size, double learning_rate) {
     for (int i = 0; i < num_neurons; ++i) {
         for (int j = 0; j < output_size; ++j) {
@@ -122,4 +155,14 @@ void backward(Layer* network, double* inputs, double* targets, int num_layers, i
     next_activations = get_activations(network[1].neurons, network[1].num_neurons);
     backpropagate(network[0].neurons, inputs, next_activations, input_size, network[0].num_neurons, network[1].num_neurons, learning_rate);
     free(next_activations);
+}
+
+
+double mean_squared_error(double* targets, double* outputs, int size) {
+    double sum = 0.0;
+    for (int i = 0; i < size; ++i) {
+        double error = targets[i] - outputs[i];
+        sum += error * error;
+    }
+    return sum / size;
 }

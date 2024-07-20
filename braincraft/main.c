@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <time.h>
 #include "braincraft.h"
 
@@ -76,7 +77,6 @@ int main() {
     }
 
     print_network(network, num_layers, input_size);
-
     free_network(network, num_layers);
 
     return 0;
