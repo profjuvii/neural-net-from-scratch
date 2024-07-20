@@ -19,6 +19,17 @@ void init_layer(Layer* layer, int num_neurons, int input_size) {
 }
 
 
+void free_network(Layer* network, int num_layers) {
+    for (int i = 0; i < num_layers; ++i) {
+        for (int j = 0; j < network[i].num_neurons; ++j) {
+            free(network[i].neurons[j].weights);
+        }
+        free(network[i].neurons);
+    }
+    free(network);
+}
+
+
 double sigmoid(double x) {
     return 1.0 / (1.0 + exp(-x));
 }
@@ -76,18 +87,22 @@ double mean_squared_error(double* targets, double* outputs, int size) {
 }
 
 
-void backpropagate(Neuron* layer, double* inputs, double* targets, int input_size, int num_neurons, double learning_rate) {
+void backpropagate(Neuron* neurons, double* inputs, double* targets, int input_size, int num_neurons, int output_size, double learning_rate) {
     for (int i = 0; i < num_neurons; ++i) {
-        double error = targets[i] - layer[i].output;
-        for (int j = 0; j < input_size; ++j) {
-            layer[i].weights[j] += learning_rate * error * layer[i].output * (1.0 - layer[i].output) * inputs[j];
+        for (int j = 0; j < output_size; ++j) {
+            double error = targets[j] - neurons[i].output;
+            double delta = learning_rate * error * neurons[i].output * (1.0 - neurons[i].output);
+            for (int k = 0; k < input_size; ++k) {
+                double weight_update = delta * inputs[k];
+                neurons[i].weights[k] += weight_update;
+            }
+            neurons[i].bias += delta;
         }
-        layer[i].bias += learning_rate * error * layer[i].output * (1.0 - layer[i].output);
     }
 }
 
 
-void backward(Layer* network, double* inputs, double* targets, int num_layers, int input_size, double learning_rate) {
+void backward(Layer* network, double* inputs, double* targets, int num_layers, int input_size, int output_size, double learning_rate) {
     double* next_activations = NULL;
     double* prev_activations = NULL;
 
@@ -95,16 +110,16 @@ void backward(Layer* network, double* inputs, double* targets, int num_layers, i
         prev_activations = get_activations(network[i - 1].neurons, network[i - 1].num_neurons);
 
         if (i == num_layers - 1) {
-            backpropagate(network[i].neurons, prev_activations, targets, network[i - 1].num_neurons, network[i].num_neurons, learning_rate);
+            backpropagate(network[i].neurons, prev_activations, targets, network[i - 1].num_neurons, network[i].num_neurons, output_size, learning_rate);
         } else {
             next_activations = get_activations(network[i + 1].neurons, network[i + 1].num_neurons);
-            backpropagate(network[i].neurons, prev_activations, next_activations, network[i - 1].num_neurons, network[i].num_neurons, learning_rate);
+            backpropagate(network[i].neurons, prev_activations, next_activations, network[i - 1].num_neurons, network[i].num_neurons, network[i + 1].num_neurons, learning_rate);
             free(next_activations);
         }
         free(prev_activations);
     }
 
     next_activations = get_activations(network[1].neurons, network[1].num_neurons);
-    backpropagate(network[0].neurons, inputs, next_activations, input_size, network[0].num_neurons, learning_rate);
+    backpropagate(network[0].neurons, inputs, next_activations, input_size, network[0].num_neurons, network[1].num_neurons, learning_rate);
     free(next_activations);
 }
