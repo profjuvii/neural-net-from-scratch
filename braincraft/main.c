@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 #include "braincraft.h"
 
@@ -53,7 +54,7 @@ int main() {
     double learning_rate = 0.01;
 
     double inputs[] = {1.0, -0.45, 0.71, 0.3, 1.7, 2.2};
-    double targets[] = {0.85};
+    double targets[] = {0.5};
 
     Layer* network = (Layer*)calloc(num_layers, sizeof(Layer));
 
@@ -64,7 +65,7 @@ int main() {
     init_layer(&network[3], output_size, network[2].num_neurons); // the last layer
 
     // training loop
-    for (int i = 0; i < num_epochs; ++i) {
+    for (int i = 0; i <= num_epochs; ++i) {
         forward(network, num_layers, inputs, input_size);
         backward(network, inputs, targets, num_layers, input_size, output_size, learning_rate);
         if (i % 10 == 0) {

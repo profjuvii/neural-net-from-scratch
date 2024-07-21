@@ -1,7 +1,6 @@
 #ifndef _BRAINCRAFT_H
 #define _BRAINCRAFT_H
 
-#include <stdlib.h>
 #include <math.h>
 
 typedef struct {
