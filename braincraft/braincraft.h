@@ -7,27 +7,44 @@ typedef struct {
     double* weights;
     double bias;
     double output;
+    double* weight_gradients;
+    double bias_gradient;
 } Neuron;
 
+typedef double (*ActivationFunc)(double, void *);
+
 typedef struct {
-    Neuron* neurons;
+    Neuron *neurons;
     int num_neurons;
+    int input_size;
+    ActivationFunc func;
+    void *params;
 } Layer;
 
+typedef struct {
+    Layer *layers;
+    int num_layers;
+} NeuralNetwork;
 
-void init_layer(Layer* layer, int size, int input_size);
-void free_network(Layer* network, int num_layers);
 
-double sigmoid(double x);
-double relu(double x);
-double leaky_relu(double x, double alpha);
-double prelu(double x, double alpha);
-double elu(double x, double alpha);
-void softmax(double* x, double* output, int size);
-double swish(double x);
+NeuralNetwork *create_network(int num_layers);
+void destroy_network(NeuralNetwork *network);
+void init_layer(Layer *layer, int input_size, int num_neurons, ActivationFunc func, void *params);
+void print_network_info(const NeuralNetwork *network);
 
-void forward(Layer* network, int num_layers, double* inputs, int input_size);
-void backward(Layer* network, double *inputs, double *targets, int num_layers, int input_size, int output_size, double learning_rate);
+
+double relu(double x, void *params);
+double leaky_relu(double x, void *params);
+double elu(double x, void *params);
+double selu(double x, void *params);
+double hyperbolic_tangent(double x, void *params);
+double sigmoid(double x, void *params);
+double softmax(double x, void *params);
+double swish(double x, void *params);
+
+
+void forward(NeuralNetwork *network, double *inputs);
+void backward(NeuralNetwork *network, double* inputs, double* targets, int output_size, double learning_rate);
 double mean_squared_error(double* targets, double* outputs, int size);
 
 #endif /* _BRAINCRAFT_H */
