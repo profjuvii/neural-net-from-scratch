@@ -7,7 +7,7 @@ float relu(float x) {
 }
 
 float leaky_relu(float x, float alpha) {
-    return x > 0 ? x : (alpha == 0.0 ? 0.01 : alpha) * x;
+    return x > 0 ? x : (alpha <= 0.0 ? 0.01 : alpha) * x;
 }
 
 float sigmoid(float x) {

@@ -80,7 +80,7 @@ void forward_pass(NeuralNetwork *nn, float *inputs) {
         Layer *layer = &nn->layers[i];
 
         for (int j = 0; j < layer->output_size; ++j) {
-            double x = sum(&layer->neurons[j], layer->input_size, i == 0 ? inputs : nn->layers[i - 1].outputs);
+            float x = sum(&layer->neurons[j], layer->input_size, i == 0 ? inputs : nn->layers[i - 1].outputs);
             layer->sums[j] = x;
             if (layer->activation_func != SOFTMAX) {
                 layer->outputs[j] = func(layer->activation_func, x, layer->alpha);
