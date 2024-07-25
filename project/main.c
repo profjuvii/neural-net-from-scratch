@@ -44,7 +44,7 @@ void print_neural_network(NeuralNetwork *nn) {
 }
 
 int main() {
-    // srand(time(NULL));
+    srand(time(NULL));
 
     int input_size = 10;
     int num_classes = 2;
@@ -53,16 +53,18 @@ int main() {
     float targets[] = {1.0, 0.0};
 
     int num_layers = 3;
-    float learning_rate = 0.001;
+    float learning_rate = 0.01;
 
     float momentum = 0.9;
     float beta1 = 0.9, beta2 = 0.999;
 
-    NeuralNetwork *nn = create_network(num_layers, ADAM, CROSS_ENTROPY, learning_rate, momentum, beta1, beta2);
+    NeuralNetwork *nn = create_network(num_layers, SGD, CROSS_ENTROPY, learning_rate, momentum, beta1, beta2);
 
     init_layer(&nn->layers[0], input_size, 8, RELU, 0.0);
     init_layer(&nn->layers[1], 8, 6, RELU, 0.0);
     init_layer(&nn->layers[2], 4, num_classes, SOFTMAX, 0.0);
+
+    print_neural_network(nn);
 
     int num_epochs = 1000;
     for (int i = 0; i <= num_epochs; ++i) {

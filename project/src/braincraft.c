@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <math.h>
 #include "braincraft.h"
 
 NeuralNetwork *create_network(int num_layers, Optimizer optimizer, LossFunction loss_func, float learning_rate, float momentum, float beta1, float beta2) {
@@ -33,6 +33,9 @@ NeuralNetwork *create_network(int num_layers, Optimizer optimizer, LossFunction 
 
     nn->loss_func = loss_func;
     nn->learning_rate = learning_rate;
+    nn->momentum = momentum;
+    nn->beta1 = beta1;
+    nn->beta2 = beta2;
 
     return nn;
 }
@@ -65,12 +68,15 @@ void init_layer(Layer *layer, int input_size, int output_size, ActivationFunctio
     layer->alpha = alpha;
 
     layer->neurons = (Neuron *)malloc(output_size * sizeof(Neuron));
+    float limit = sqrt(6.0 / (input_size + output_size));
+
+    // Initialize weights and biases for each neuron using Xavier (Glorot) initialization
     for (int i = 0; i < output_size; ++i) {
         layer->neurons[i].weights = (float *)malloc(input_size * sizeof(float));
         for (int j = 0; j < input_size; ++j) {
-            layer->neurons[i].weights[j] = (float)rand() / RAND_MAX;
+            layer->neurons[i].weights[j] = (float)rand() / RAND_MAX * 2 * limit - limit;
         }
-        layer->neurons[i].bias = (float)rand() / RAND_MAX;
+        layer->neurons[i].bias = (float)rand() / RAND_MAX * 2 * limit - limit;
     }
 
     layer->outputs = (float *)malloc(output_size * sizeof(float));
@@ -213,8 +219,7 @@ void backward_pass(NeuralNetwork *nn, float *targets) {
     for (int l = nn->num_layers - 2; l >= 0; --l) {
         Layer *layer = &nn->layers[l];
         Layer *next_layer = &nn->layers[l + 1];
-        float *hidden_gradients = (float *)malloc(layer->output_size * sizeof(float));
-        memset(hidden_gradients, 0, layer->output_size * sizeof(float));
+        float *hidden_gradients = (float *)calloc(layer->output_size, sizeof(float));
 
         // Compute gradients for each neuron in the current layer
         for (int i = 0; i < layer->output_size; ++i) {
@@ -247,7 +252,6 @@ void backward_pass(NeuralNetwork *nn, float *targets) {
     }
     free(output_gradients);
 }
-
 
 float mse(float *predictions, float *targets, int size) {
     float sum_squared_errors = 0.0;
