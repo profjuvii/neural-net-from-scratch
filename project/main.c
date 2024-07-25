@@ -77,8 +77,6 @@ int main() {
         }
     }
 
-    print_neural_network(nn);
-
     destroy_network(nn);
 
     return 0;
