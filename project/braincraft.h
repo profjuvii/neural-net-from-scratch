@@ -2,12 +2,12 @@
 #define BRAINCRAFT_H
 
 #include "activation_funcs.h"
+#include "optimizers.h"
 
 typedef enum {
-    SGD,
-    MOMENTUM,
-    ADAM
-} OptimizerType;
+    MSE,
+    CROSS_ENTROPY
+} LossFunction;
 
 typedef struct {
     float *weights;
@@ -22,18 +22,27 @@ typedef struct {
     float *outputs;
     float *sums;
     float alpha;
+    float *velocity;
+    float *m, *v;
 } Layer;
 
 typedef struct {
     int num_layers;
     Layer *layers;
-    OptimizerType optimizer;
+    float *predictions;
+    Optimizer optimizer;
+    LossFunction loss_func;
     float learning_rate;
+    float momentum;
+    float beta1, beta2;
 } NeuralNetwork;
 
-NeuralNetwork *create_network(int num_layers, OptimizerType optimizer, float learning_rate);
+NeuralNetwork *create_network(int num_layers, Optimizer optimizer, LossFunction loss_func, float learning_rate, float momentum, float beta1, float beta2);
 void destroy_network(NeuralNetwork *nn);
-void init_layer(Layer *layer, int input_size, int output_size, ActivationFunction activation, float alpha);
+void init_layer(Layer *layer, int input_size, int output_size, ActivationFunction activation_func, float alpha);
+
 void forward_pass(NeuralNetwork *nn, float *inputs);
+void backward_pass(NeuralNetwork *nn, float *targets);
+float mse(float *predictions, float *targets, int size);
 
 #endif // BRAINCRAFT_H

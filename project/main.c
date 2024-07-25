@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #include "braincraft.h"
 
 void print_neural_network(NeuralNetwork *nn) {
@@ -42,23 +44,37 @@ void print_neural_network(NeuralNetwork *nn) {
 }
 
 int main() {
+    // srand(time(NULL));
+
     int input_size = 10;
-    int output_size = 2;
+    int num_classes = 2;
 
     float inputs[] = {1.0, 0.01, 0.6, 0.78, 0.01, 1.0, 0.5, 0.25, 0.6, 1.0};
-    // float targets[] = {1.0, 0.0};
+    float targets[] = {1.0, 0.0};
 
-    int num_layers = 4;
-    float learning_rate = 0.01;
+    int num_layers = 3;
+    float learning_rate = 0.001;
 
-    NeuralNetwork *nn = create_network(num_layers, SGD, learning_rate);
+    float momentum = 0.9;
+    float beta1 = 0.9, beta2 = 0.999;
 
-    init_layer(&nn->layers[0], input_size, 10, RELU, 0.0);
-    init_layer(&nn->layers[1], 10, 8, RELU, 0.0);
-    init_layer(&nn->layers[2], 8, 6, RELU, 0.0);
-    init_layer(&nn->layers[3], 6, output_size, SOFTMAX, 0.0);
+    NeuralNetwork *nn = create_network(num_layers, ADAM, CROSS_ENTROPY, learning_rate, momentum, beta1, beta2);
 
-    forward_pass(nn, inputs);
+    init_layer(&nn->layers[0], input_size, 8, RELU, 0.0);
+    init_layer(&nn->layers[1], 8, 6, RELU, 0.0);
+    init_layer(&nn->layers[2], 4, num_classes, SOFTMAX, 0.0);
+
+    int num_epochs = 1000;
+    for (int i = 0; i <= num_epochs; ++i) {
+        forward_pass(nn, inputs);
+        backward_pass(nn, targets);
+
+        if (i % 100 == 0) {
+            printf("Iteration: %d\n", i);
+            printf("Loss: %f\n\n", mse(nn->predictions, targets, num_classes));
+        }
+    }
+
     print_neural_network(nn);
 
     destroy_network(nn);

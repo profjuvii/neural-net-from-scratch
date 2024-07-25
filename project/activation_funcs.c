@@ -52,14 +52,3 @@ float tanh_derivative(float x) {
     float t = tanh_activation(x);
     return 1.0 - t * t;
 }
-
-void softmax_derivative(float *input, float *output, int size, float *derivatives) {
-    float *softmax_output = (float *)malloc(size * sizeof(float));
-    softmax(input, softmax_output, size);
-
-    for (int i = 0; i < size; ++i) {
-        derivatives[i] = softmax_output[i] * (1.0 - softmax_output[i]);
-    }
-
-    free(softmax_output);
-}
