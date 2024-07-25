@@ -1,5 +1,6 @@
 CC = gcc
-CFLAGS = -std=c11 -Wall -Werror
+CFLAGS = -Iinclude -Wall -Wextra -std=c99
+LIB_DIR = src
 OUTPUT = program
 
 all: $(OUTPUT)
@@ -10,13 +11,13 @@ $(OUTPUT): main.o braincraft.o optimizers.o activation_funcs.o
 main.o: main.c
 	$(CC) $(CFLAGS) -c $^ -o $@
 
-braincraft.o: braincraft.c
+braincraft.o: $(LIB_DIR)/braincraft.c
 	$(CC) $(CFLAGS) -c $^ -o $@
 
-optimizers.o: optimizers.c
+optimizers.o: $(LIB_DIR)/optimizers.c
 	$(CC) $(CFLAGS) -c $^ -o $@
 
-activation_funcs.o: activation_funcs.c
+activation_funcs.o: $(LIB_DIR)/activation_funcs.c
 	$(CC) $(CFLAGS) -c $^ -o $@
 
 clean:
