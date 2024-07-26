@@ -7,10 +7,13 @@ OUTPUT = program
 
 all: $(OUTPUT)
 
-$(OUTPUT): main.o braincraft.o optimizers.o activation_funcs.o img_vec.o
+$(OUTPUT): main.o test_networks.o img_vec.o braincraft.o optimizers.o activation_funcs.o
 	$(CC) $(CFLAGS) $^ $(LIBS) -o $@
 
 main.o: main.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+test_networks.o: $(LIB_SRC)/test_networks.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 img_vec.o: $(LIB_SRC)/img_vec.c

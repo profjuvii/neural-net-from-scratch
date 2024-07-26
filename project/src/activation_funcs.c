@@ -2,6 +2,10 @@
 #include <math.h>
 #include "activation_funcs.h"
 
+float linear(float x) {
+    return x;
+}
+
 float relu(float x) {
     return x > 0 ? x : 0;
 }
@@ -33,6 +37,10 @@ void softmax(float *input, float *output, int size) {
     for (int i = 0; i < size; ++i) {
         output[i] /= sum;
     }
+}
+
+float linear_derivative() {
+    return 1.0;
 }
 
 float relu_derivative(float x) {

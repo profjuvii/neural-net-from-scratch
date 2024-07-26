@@ -3,4 +3,4 @@
 
 float *png_to_vector(FILE *fp, size_t *out_size);
 
-#endif
+#endif // IMG_VEC_H

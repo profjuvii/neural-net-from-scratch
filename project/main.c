@@ -3,51 +3,12 @@
 #include <time.h>
 #include "braincraft.h"
 #include "img_vec.h"
+#include "test_networks.h"
 
 #define NUM_TRAINING_IMAGES 10
 #define NUM_TESTING_IMAGES 10
 #define INPUT_SIZE 784
 #define NUM_CLASSES 10
-
-void print_neural_network(const NeuralNetwork *nn) {
-    printf("Neural Network:\n");
-    printf("Number of layers: %d\n", nn->num_layers);
-    printf("Optimizer: ");
-    switch (nn->optimizer) {
-        case SGD: printf("SGD\n"); break;
-        case MOMENTUM: printf("Momentum\n"); break;
-        case ADAM: printf("Adam\n"); break;
-    }
-    printf("Learning rate: %f\n", nn->learning_rate);
-
-    for (int i = 0; i < nn->num_layers; ++i) {
-        const Layer *layer = &nn->layers[i];
-        printf("Layer %d:\n", i + 1);
-        printf("  Input size: %d\n", layer->input_size);
-        printf("  Output size: %d\n", layer->output_size);
-        printf("  Activation function: ");
-        switch (layer->activation_func) {
-            case RELU: printf("ReLU\n"); break;
-            case LEAKY_RELU: printf("Leaky ReLU\n"); break;
-            case SIGMOID: printf("Sigmoid\n"); break;
-            case TANH: printf("Tanh\n"); break;
-            case SOFTMAX: printf("Softmax\n"); break;
-        }
-        printf("  Alpha: %f\n", layer->alpha);
-
-        for (int j = 0; j < layer->output_size; ++j) {
-            const Neuron *neuron = &layer->neurons[j];
-            printf("    Neuron %d:\n", j + 1);
-            printf("      Weights: ");
-            for (int k = 0; k < layer->input_size; ++k) {
-                printf("%f ", neuron->weights[k]);
-            }
-            printf("\n");
-            printf("      Bias: %f\n", neuron->bias);
-            printf("      Output: %f\n", layer->outputs[j]);
-        }
-    }
-}
 
 void load_data(const char *directory, float inputs[][INPUT_SIZE], float targets[][NUM_CLASSES], int num_images) {
     for (int i = 0; i < num_images; ++i) {
@@ -81,7 +42,19 @@ void load_data(const char *directory, float inputs[][INPUT_SIZE], float targets[
 }
 
 int main() {
-    srand(time(NULL));
+    srand((unsigned int)time(NULL));
+
+    // test_single_layer_perceptron();
+    // test_one_hidden_layer_network();
+    // test_two_hidden_layers_network();
+    // test_regression_one_hidden_layer();
+    // test_binary_classification();
+    // test_classification_tanh();
+    // test_classification_with_optimizers();
+    // test_training_with_different_optimizers();
+    // test_training_with_different_loss_functions();
+    // test_training_with_different_activation_functions();
+    // test_training_with_different_parameters();
 
     float inputs_train[NUM_TRAINING_IMAGES][INPUT_SIZE];
     float targets_train[NUM_TRAINING_IMAGES][NUM_CLASSES];

@@ -93,6 +93,8 @@ float sum(Neuron *neuron, int input_size, float *inputs) {
 
 float func(ActivationFunction func, float x, float alpha) {
     switch (func) {
+        case LINEAR:
+            return linear(x);
         case RELU:
             return relu(x);
         case LEAKY_RELU:
@@ -128,6 +130,8 @@ void forward_pass(NeuralNetwork *nn, float *inputs) {
 
 float func_grad(ActivationFunction func, float x, float alpha) {
     switch (func) {
+        case LINEAR:
+            return linear_derivative();
         case RELU:
             return relu_derivative(x);
         case LEAKY_RELU:

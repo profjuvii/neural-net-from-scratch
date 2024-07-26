@@ -2,6 +2,7 @@
 #define ACTIVATION_FUNCS_H
 
 typedef enum {
+    LINEAR,
     RELU,
     LEAKY_RELU,
     SIGMOID,
@@ -9,12 +10,14 @@ typedef enum {
     SOFTMAX
 } ActivationFunction;
 
+float linear(float x);
 float relu(float x);
 float leaky_relu(float x, float alpha);
 float sigmoid(float x);
 float tanh_activation(float x);
 void softmax(float *input, float *output, int size);
 
+float linear_derivative();
 float relu_derivative(float x);
 float leaky_relu_derivative(float x, float alpha);
 float sigmoid_derivative(float x);
