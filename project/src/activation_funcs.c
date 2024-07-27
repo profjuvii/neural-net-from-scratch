@@ -67,10 +67,10 @@ float activation_func(ActivationFunction func, float x, float alpha) {
         case TANH:
             return tanh_activation(x);
         case SOFTMAX:
-            fprintf(stderr, "Error: SOFTMAX should be applied to the entire layer output\n");
+            fprintf(stderr, "Error: SOFTMAX should be applied to the entire layer output.\n");
             return x;
         default:
-            fprintf(stderr, "Error: Unknown activation function\n");
+            fprintf(stderr, "Error: Unknown activation function.\n");
             return x;
     }
 }
@@ -88,10 +88,10 @@ float activation_func_grad(ActivationFunction func, float x, float alpha) {
         case TANH:
             return tanh_grad(x);
         case SOFTMAX:
-            fprintf(stderr, "Error: SOFTMAX gradient requires special handling\n");
+            fprintf(stderr, "Error: SOFTMAX gradient requires special handling.\n");
             return 0.0;
         default:
-            fprintf(stderr, "Error: Unknown activation function\n");
+            fprintf(stderr, "Error: Unknown activation function.\n");
             return 0.0;
     }
 }
