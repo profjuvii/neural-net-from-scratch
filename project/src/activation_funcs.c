@@ -1,10 +1,7 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include "activation_funcs.h"
-
-float linear(float x) {
-    return x;
-}
 
 float relu(float x) {
     return x > 0 ? x : 0;
@@ -39,24 +36,62 @@ void softmax(float *input, float *output, int size) {
     }
 }
 
-float linear_derivative() {
-    return 1.0;
-}
-
-float relu_derivative(float x) {
+float relu_grad(float x) {
     return x > 0 ? 1.0 : 0.0;
 }
 
-float leaky_relu_derivative(float x, float alpha) {
+float leaky_relu_grad(float x, float alpha) {
     return x > 0 ? 1.0 : alpha;
 }
 
-float sigmoid_derivative(float x) {
+float sigmoid_grad(float x) {
     float s = sigmoid(x);
     return s * (1.0 - s);
 }
 
-float tanh_derivative(float x) {
-    float t = tanh_activation(x);
+float tanh_grad(float x) {
+    float t = (float)tanh(x);
     return 1.0 - t * t;
+}
+
+float activation_func(ActivationFunction func, float x, float alpha) {
+    switch (func) {
+        case LINEAR:
+            return x;
+        case RELU:
+            return relu(x);
+        case LEAKY_RELU:
+            return leaky_relu(x, alpha);
+        case SIGMOID:
+            return sigmoid(x);
+        case TANH:
+            return tanh_activation(x);
+        case SOFTMAX:
+            fprintf(stderr, "Error: SOFTMAX should be applied to the entire layer output\n");
+            return x;
+        default:
+            fprintf(stderr, "Error: Unknown activation function\n");
+            return x;
+    }
+}
+
+float activation_func_grad(ActivationFunction func, float x, float alpha) {
+    switch (func) {
+        case LINEAR:
+            return 1.0;
+        case RELU:
+            return relu_grad(x);
+        case LEAKY_RELU:
+            return leaky_relu_grad(x, alpha);
+        case SIGMOID:
+            return sigmoid_grad(x);
+        case TANH:
+            return tanh_grad(x);
+        case SOFTMAX:
+            fprintf(stderr, "Error: SOFTMAX gradient requires special handling\n");
+            return 0.0;
+        default:
+            fprintf(stderr, "Error: Unknown activation function\n");
+            return 0.0;
+    }
 }
