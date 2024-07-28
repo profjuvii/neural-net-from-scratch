@@ -5,7 +5,7 @@ OUTPUT = program
 
 all: $(OUTPUT)
 
-$(OUTPUT): main.o braincraft.o optimizers.o activation_funcs.o
+$(OUTPUT): main.o braincraft.o optimizers.o loss_funcs.o activation_funcs.o
 	$(CC) $(CFLAGS) $^ $(LIBS) -o $@
 
 main.o: main.c
@@ -15,6 +15,9 @@ braincraft.o: $(LIB_SRC)/braincraft.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 optimizers.o: $(LIB_SRC)/optimizers.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+loss_funcs.o: $(LIB_SRC)/loss_funcs.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 activation_funcs.o: $(LIB_SRC)/activation_funcs.c

@@ -2,12 +2,8 @@
 #define BRAINCRAFT_H
 
 #include "activation_funcs.h"
+#include "loss_funcs.h"
 #include "optimizers.h"
-
-typedef enum {
-    MSE,
-    CROSS_ENTROPY
-} LossFunction;
 
 typedef struct {
     float *weights;
