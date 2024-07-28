@@ -42,6 +42,6 @@ void destroy_network(NeuralNetwork *nn);
 void init_layer(Layer *layer, int input_size, int output_size, ActivationFunction activation_func, float alpha);
 
 void forward_pass(NeuralNetwork *nn, float *inputs);
-void backward_pass(NeuralNetwork *nn, float *targets);
+int backward_pass(NeuralNetwork *nn, float *inputs, float *targets);
 
 #endif // BRAINCRAFT_H

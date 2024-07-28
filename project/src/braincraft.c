@@ -140,4 +140,139 @@ void forward_pass(NeuralNetwork *nn, float *inputs) {
     nn->predicts = nn->layers[nn->num_layers - 1].outputs;
 }
 
-void backward_pass(NeuralNetwork *nn, float *targets);
+float compute_weighted_sum_delta(Layer *layer, float grad, int idx) {
+    float sum = 0.0;
+    for (int i = 0; i < layer->output_size; ++i) {
+        sum += layer->neurons[i].weights[idx] * grad;
+    }
+    return sum;
+}
+
+float* copy_vector(float *vector, int size) {
+    float *copy = (float *)malloc(size * sizeof(float));
+    if (copy == NULL) {
+        fprintf(stderr, "Error: Failed to allocate memory for vector copy.\n");
+        return NULL;
+    }
+
+    for (int i = 0; i < size; ++i) {
+        copy[i] = vector[i];
+    }
+
+    return copy;
+}
+
+int backward_pass(NeuralNetwork *nn, float *inputs, float *targets) {
+    float learning_rate = nn->learning_rate;
+    Layer *output_layer = &nn->layers[nn->num_layers - 1];
+
+    float *loss_grads = (float *)malloc(output_layer->output_size * sizeof(float));
+    if (loss_grads == NULL) {
+        fprintf(stderr, "Error: Failed to allocate memory for loss gradients.\n");
+        return 1;
+    }
+
+    if (nn->loss_func == CROSS_ENTROPY && output_layer->activation_func == SOFTMAX) {
+        // Compute the losses in the last layer
+        for (int i = 0; i < output_layer->output_size; ++i) {
+            loss_grads[i] = output_layer->outputs[i] - targets[i];
+        }
+        
+        Layer *prev_layer = &nn->layers[nn->num_layers - 2];
+        
+        // Update the weights and biases in the last layer
+        for (int i = 0; i < output_layer->output_size; ++i) {
+            for (int j = 0; j < prev_layer->output_size; ++j) {
+                float grad_weight = loss_grads[i] * prev_layer->outputs[j];
+                output_layer->neurons[i].weights[j] -= learning_rate * grad_weight;
+            }
+            output_layer->neurons[i].bias -= learning_rate * loss_grads[i]; 
+        }
+
+    } else if (nn->loss_func == MSE) {
+        // Compute the losses in the last layer
+        for (int i = 0; i < output_layer->output_size; ++i) {
+            loss_grads[i] = 2 * (output_layer->outputs[i] - targets[i]) / output_layer->output_size;
+        }
+
+        Layer *prev_layer = &nn->layers[nn->num_layers - 2];
+        
+        // Update the weights and biases in the last layer
+        for (int i = 0; i < output_layer->output_size; ++i) {
+            float delta = loss_grads[i] * activation_func_grad(output_layer->activation_func, output_layer->outputs[i], output_layer->alpha);
+
+            for (int j = 0; j < prev_layer->output_size; ++j) {
+                output_layer->neurons[i].weights[j] -= learning_rate * delta * prev_layer->outputs[j];
+            }
+            output_layer->neurons[i].bias -= learning_rate * delta;
+        }
+    }
+
+    float *next_grads = copy_vector(loss_grads, output_layer->output_size);
+    free(loss_grads);
+
+    for (int l = nn->num_layers - 2; l >= 0; --l) {
+        Layer *layer = &nn->layers[l];
+        Layer *next_layer = &nn->layers[l + 1];
+        Layer *prev_layer = l > 0 ? &nn->layers[l - 1] : NULL;
+
+        float *grads = (float *)calloc(layer->output_size, sizeof(float));
+        if (grads == NULL) {
+            fprintf(stderr, "Error: Failed to allocate memory for gradients.\n");
+            free(next_grads);
+            return 1;
+        }
+
+        // Compute the gradients of the current layer
+        for (int i = 0; i < layer->output_size; ++i) {
+            for (int j = 0; j < next_layer->output_size; ++j) {
+                float weighted_sum_delta = compute_weighted_sum_delta(next_layer, next_grads[j], j);
+                grads[i] = weighted_sum_delta * activation_func_grad(layer->activation_func, layer->sums[i], layer->alpha);
+            }
+        }
+
+        // Update the weights and biases in the current layer
+        for (int i = 0; i < layer->output_size; ++i) {
+            Neuron *neuron = &layer->neurons[i];
+
+            float *weight_grads = (float *)malloc(layer->input_size * sizeof(float));
+            if (grads == NULL) {
+                fprintf(stderr, "Error: Failed to allocate memory for weight gradients.\n");
+                free(grads);
+                free(next_grads);
+                return 1;
+            }
+
+            // Compute the weight gradients of the current layer
+            for (int j = 0; j < layer->input_size; ++j) {
+                weight_grads[j] = grads[i] * (l > 0 ? prev_layer->outputs[j] : inputs[j]);
+            }
+
+            switch (nn->optimizer) {
+                case SGD:
+                    sgd(neuron->weights, weight_grads, layer->input_size, learning_rate);
+                    break;
+                case MOMENTUM:
+                    momentum(neuron->weights, weight_grads, neuron->velocity, layer->input_size, learning_rate, nn->momentum);
+                    break;
+                case ADAM:
+                    adam(neuron->weights, weight_grads, neuron->m, neuron->v, layer->input_size, learning_rate, nn->beta1, nn->beta2, 1e-8);
+                    break;
+                default:
+                    break;
+            }
+            neuron->bias -= learning_rate * grads[i];
+
+            free(weight_grads);
+        }
+
+        free(next_grads);
+        next_grads = copy_vector(grads, layer->output_size);
+
+        free(grads);
+    }
+
+    free(next_grads);
+
+    return 0;
+}
