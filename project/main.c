@@ -4,6 +4,14 @@
 #include "braincraft.h"
 #include "data_loader.h"
 
+void print_vector(char *text, float *vector, int size) {
+    printf("%s", text);
+    for (int i = 0; i < size; ++i) {
+        printf("%*.3f ", 4, vector[i]);
+    }
+    printf("\n");
+}
+
 int main() {
     srand((unsigned int)time(NULL));
 
@@ -12,7 +20,7 @@ int main() {
     int input_size = 784;
     int num_classes = 10;
 
-    float learning_rate = 0.01;
+    float learning_rate = 0.001;
     float momentum = 0.9;
     float beta1 = 0.9;
     float beta2 = 0.999;
@@ -25,28 +33,32 @@ int main() {
     init_layer(&nn->layers[3], 64, num_classes, SOFTMAX, 0.0);
 
     int batch_size = 64;
-    DataLoader *data_loader = create_data_loader(batch_size);
-    
-    int epochs = 1000;
-    for (int i = 0; i <= epochs; ++i) {
-        load(data_loader, num_classes); return 1;
+    char *path = "/Users/profjuvi/Datasets/MNIST/";
 
+    DataLoader *data_loader = create_data_loader(batch_size, input_size, path);
+
+    int num_epochs = 1000;
+
+    // Training loop
+    for (int i = 0; i <= num_epochs; ++i) {
         if (i % 10 == 0) {
             printf("\nIteration: %d\n", i);
         }
 
+        load_data(data_loader, num_classes);
+
         for (int j = 0; j < batch_size; ++j) {
-            Vector *vector = &data_loader->vectors[j];
-            int label = data_loader->labels[j];
+            float *features = data_loader->vectors[j];
+            float *targets = create_targets(num_classes, data_loader->labels[j]);
 
-            float *targets = (float *)calloc(num_classes, sizeof(float));
-            targets[label] = 1.0;
-
-            forward_pass(nn, vector->features);
-            backward_pass(nn, vector->features, targets);
+            forward_pass(nn, features);
+            backward_pass(nn, features, targets);
 
             if (i % 10 == 0) {
-                printf("  Image: %d\tLoss: %f\n", j, loss_func(nn->loss_func, nn->predicts, targets, num_classes));
+                printf("  Image: %d\n  Loss: %f\n", j + 1, loss_func(nn->loss_func, nn->predicts, targets, num_classes));
+                print_vector("    Predicts:\t", nn->predicts, num_classes);
+                print_vector("    Targets:\t", targets, num_classes);
+                printf("\n");
             }
 
             free(targets);

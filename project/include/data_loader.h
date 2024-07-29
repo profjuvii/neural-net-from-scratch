@@ -3,16 +3,18 @@
 
 #include "image2vector.h"
 
-#define PATH "/Users/profjuvi/Datasets/MNIST/"
-
 typedef struct {
+    int batch_size;
+    int input_size;
     float **vectors;
     int *labels;
-    int size;
+    char *path;
 } DataLoader;
 
-DataLoader* create_data_loader(int batch_size);
+DataLoader* create_data_loader(int batch_size, int input_size, char *path);
 void destroy_data_loader(DataLoader *data_loader);
-void load(DataLoader *data_loader, int num_classes);
+
+int load_data(DataLoader *data_loader, int num_classes);
+float* create_targets(int num_classes, int index);
 
 #endif // DATA_LOADER_H

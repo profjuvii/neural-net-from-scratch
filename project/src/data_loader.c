@@ -4,33 +4,42 @@
 #include <string.h>
 #include "data_loader.h"
 
-DataLoader* create_data_loader(int batch_size) {
+DataLoader* create_data_loader(int batch_size, int input_size, char *path) {
     DataLoader *data_loader = (DataLoader *)malloc(sizeof(DataLoader));
+
     data_loader->vectors = (float **)malloc(batch_size * sizeof(float *));
+    for (int i = 0; i < batch_size; ++i) {
+        data_loader->vectors[i] = (float *)malloc(input_size * sizeof(float));
+    }
 
     data_loader->labels = (int *)malloc(batch_size * sizeof(int));
-    data_loader->size = batch_size;
+
+    data_loader->batch_size = batch_size;
+    data_loader->input_size = input_size;
+    data_loader->path = path;
+
     return data_loader;
 }
 
-void clear_data_loader(DataLoader *data_loader) {
-    for (int i = 0; i < data_loader->size; ++i) {
-        free(data_loader->vectors[i]);
-    }
-}
-
 void destroy_data_loader(DataLoader *data_loader) {
+    if (data_loader == NULL) return;
+
+    for (int i = 0; i < data_loader->batch_size; ++i) {
+        if (data_loader->vectors[i] != NULL) {
+            free(data_loader->vectors[i]);
+        }
+    }
     free(data_loader->vectors);
     free(data_loader->labels);
     free(data_loader);
 }
 
-void load(DataLoader *data_loader, int num_classes) {
-    for (int i = 0; i < data_loader->size; ++i) {
+int load_data(DataLoader *data_loader, int num_classes) {
+    for (int i = 0; i < data_loader->batch_size; ++i) {
         int label = rand() % num_classes;
 
         char dir_path[256];
-        snprintf(dir_path, sizeof(dir_path), "%s%d", PATH, label);
+        snprintf(dir_path, sizeof(dir_path), "%s%d", data_loader->path, label);
 
         DIR *dir = opendir(dir_path);
         if (dir == NULL) {
@@ -58,16 +67,21 @@ void load(DataLoader *data_loader, int num_classes) {
         char file_path[512];
         snprintf(file_path, sizeof(file_path), "%s/%s", dir_path, file_name);
 
-        printf("%s\n", file_path);
-
         int size = 0;
-        float* features = image2vector(file_path, &size);
-
-        // copy_vector(data_loader->vectors[i], features, size);
+        image2vector(file_path, data_loader->vectors[i], &size);
         data_loader->labels[i] = label;
 
-        free(features);
+        if (data_loader->input_size != size) return -1;
+
         free(file_names[file_index]);
         free(file_names);
     }
+
+    return 0;
+}
+
+float* create_targets(int num_classes, int label) {
+    float *targets = (float *)calloc(num_classes, sizeof(float));
+    targets[label] = 1.0;
+    return targets;
 }
