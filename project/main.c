@@ -7,7 +7,7 @@
 void print_vector(char *text, float *vector, int size) {
     printf("%s", text);
     for (int i = 0; i < size; ++i) {
-        printf("%*.3f ", 4, vector[i]);
+        printf("%*f ", 4, vector[i]);
     }
     printf("\n");
 }

@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <png.h>
-#include "image2vector.h"
 
 void image2vector(const char *filename, float *buffer, int *size) {
     FILE *fp = fopen(filename, "rb");
@@ -38,15 +37,51 @@ void image2vector(const char *filename, float *buffer, int *size) {
     png_bytep *row_pointers = png_get_rows(png, info);
     int width = png_get_image_width(png, info);
     int height = png_get_image_height(png, info);
+    png_byte color_type = png_get_color_type(png, info);
 
     *size = width * height;
 
-    for (int y = 0; y < height; y++) {
-        png_bytep row = row_pointers[y];
-        for (int x = 0; x < width; x++) {
-            png_byte pixel = row[x * 4];
-            buffer[y * width + x] = (float)pixel / 255.0;
-        }
+    switch (color_type) {
+        case PNG_COLOR_TYPE_GRAY:
+            for (int y = 0; y < height; ++y) {
+                png_bytep row = row_pointers[y];
+                for (int x = 0; x < width; ++x) {
+                    png_byte px = row[x];
+                    buffer[y * width + x] = (float)px / 255.0;
+                }
+            }
+            break;
+        case PNG_COLOR_TYPE_RGB:
+            for (int y = 0; y < height; ++y) {
+                png_bytep row = row_pointers[y];
+                for (int x = 0; x < width; ++x) {
+                    png_bytep px = &(row[x * 3]);
+                    float r = (float)px[0] / 255.0;
+                    float g = (float)px[1] / 255.0;
+                    float b = (float)px[2] / 255.0;
+                    float pixel_value = 0.299 * r + 0.587 * g + 0.114 * b;
+                    buffer[y * width + x] = pixel_value;
+                }
+            }
+            break;
+        case PNG_COLOR_TYPE_RGBA:
+            for (int y = 0; y < height; ++y) {
+                png_bytep row = row_pointers[y];
+                for (int x = 0; x < width; ++x) {
+                    png_bytep px = &(row[x * 4]);
+                    float r = (float)px[0] / 255.0;
+                    float g = (float)px[1] / 255.0;
+                    float b = (float)px[2] / 255.0;
+                    float pixel_value = 0.299 * r + 0.587 * g + 0.114 * b;
+                    buffer[y * width + x] = pixel_value;
+                }
+            }
+            break;
+        default:
+            fprintf(stderr, "Unsupported color type: %d\n", color_type);
+            png_destroy_read_struct(&png, &info, NULL);
+            fclose(fp);
+            return;
     }
 
     png_destroy_read_struct(&png, &info, NULL);
