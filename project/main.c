@@ -2,76 +2,58 @@
 #include <stdlib.h>
 #include <time.h>
 #include "braincraft.h"
-
-void print_neural_network(NeuralNetwork *nn) {
-    for (int i = 0; i < nn->num_layers; ++i) {
-        Layer *layer = &nn->layers[i];
-        printf("Layer %d:\n", i + 1);
-        for (int j = 0; j < layer->output_size; ++j) {
-            Neuron *neuron = &layer->neurons[j];
-            printf("  Neuron %d:\n", j + 1);
-            printf("    Weights: ");
-            for (int k = 0; k < layer->input_size; ++k) {
-                printf("%f ", neuron->weights[k]);
-            }
-            printf("\n");
-            printf("    Bias: %f\n", neuron->bias);
-            printf("    Output: %f\n\n", layer->outputs[j]);
-        }
-    }
-}
+#include "data_loader.h"
 
 int main() {
     srand((unsigned int)time(NULL));
 
-    int num_layers = 3;
-    int input_size = 10;
-    int output_size = 2;
+    int num_layers = 4;
 
-    float inputs[] = {
-        0.946, -0.382, 0.758, -1.135, 0.278,
-        -0.957, 0.504, -0.287, 0.639, -0.705
-    };
-
-    float targets[] = {
-        0.333, 0.56
-    };
+    int input_size = 784;
+    int num_classes = 10;
 
     float learning_rate = 0.01;
     float momentum = 0.9;
     float beta1 = 0.9;
     float beta2 = 0.999;
 
-    NeuralNetwork *nn = create_network(num_layers, ADAM, MSE, learning_rate, momentum, beta1, beta2);
+    NeuralNetwork *nn = create_network(num_layers, ADAM, CROSS_ENTROPY, learning_rate, momentum, beta1, beta2);
 
-    init_layer(&nn->layers[0], input_size, 5, SIGMOID, 0.0);
-    init_layer(&nn->layers[1], 5, 3, SIGMOID, 0.0);
-    init_layer(&nn->layers[2], 3, output_size, SIGMOID, 0.0);
+    init_layer(&nn->layers[0], input_size, 256, RELU, 0.0);
+    init_layer(&nn->layers[1], 256, 128, RELU, 0.0);
+    init_layer(&nn->layers[2], 128, 64, RELU, 0.0);
+    init_layer(&nn->layers[3], 64, num_classes, SOFTMAX, 0.0);
 
-    int num_epochs = 10000;
-
-    for (int i = 0; i <= num_epochs; ++i) {
-        forward_pass(nn, inputs);
-        backward_pass(nn, inputs, targets);
+    int batch_size = 64;
+    DataLoader *data_loader = create_data_loader(batch_size);
+    
+    int epochs = 1000;
+    for (int i = 0; i <= epochs; ++i) {
+        load(data_loader, num_classes); return 1;
 
         if (i % 10 == 0) {
-            printf("Iteration: %d\nLoss: %f\n\n", i, loss_func(nn->loss_func, nn->predicts, targets, output_size));
+            printf("\nIteration: %d\n", i);
+        }
+
+        for (int j = 0; j < batch_size; ++j) {
+            Vector *vector = &data_loader->vectors[j];
+            int label = data_loader->labels[j];
+
+            float *targets = (float *)calloc(num_classes, sizeof(float));
+            targets[label] = 1.0;
+
+            forward_pass(nn, vector->features);
+            backward_pass(nn, vector->features, targets);
+
+            if (i % 10 == 0) {
+                printf("  Image: %d\tLoss: %f\n", j, loss_func(nn->loss_func, nn->predicts, targets, num_classes));
+            }
+
+            free(targets);
         }
     }
 
-    print_neural_network(nn);
-
-    printf("Targets: ");
-    for (int i = 0; i < output_size; ++i) {
-        printf("%f ", targets[i]);
-    }
-    printf("\nPredicts: ");
-
-    for (int i = 0; i < output_size; ++i) {
-        printf("%f ", nn->predicts[i]);
-    }
-    printf("\n");
-
+    destroy_data_loader(data_loader);
     destroy_network(nn);
 
     return 0;

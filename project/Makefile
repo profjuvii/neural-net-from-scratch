@@ -1,14 +1,26 @@
 CC = gcc
-CFLAGS = -Iinclude -Wall -Wextra -std=c99
+
+PNG_INCLUDE_DIR = /opt/homebrew/Cellar/libpng/1.6.43/include
+PNG_LIB_DIR = /opt/homebrew/Cellar/libpng/1.6.43/lib
+
+CFLAGS = -Wall -Wextra -std=c99 -Iinclude -I$(PNG_INCLUDE_DIR)
+LDFLAGS = -L$(PNG_LIB_DIR) -lpng
+
 LIB_SRC = src
 OUTPUT = program
 
 all: $(OUTPUT)
 
-$(OUTPUT): main.o braincraft.o optimizers.o loss_funcs.o activation_funcs.o
-	$(CC) $(CFLAGS) $^ $(LIBS) -o $@
+$(OUTPUT): main.o data_loader.o image2vector.o braincraft.o optimizers.o loss_funcs.o activation_funcs.o
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
 main.o: main.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+data_loader.o: $(LIB_SRC)/data_loader.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+image2vector.o: $(LIB_SRC)/image2vector.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 braincraft.o: $(LIB_SRC)/braincraft.c
