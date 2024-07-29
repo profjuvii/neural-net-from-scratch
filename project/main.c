@@ -20,7 +20,7 @@ int main() {
     int input_size = 784;
     int num_classes = 10;
 
-    float learning_rate = 0.001;
+    float learning_rate = 0.008;
     float momentum = 0.9;
     float beta1 = 0.9;
     float beta2 = 0.999;
@@ -42,9 +42,10 @@ int main() {
     // Training loop
     for (int i = 0; i <= num_epochs; ++i) {
         if (i % 10 == 0) {
-            printf("\nIteration: %d\n", i);
+            printf("Iteration: %d\n", i);
         }
 
+        float total_loss = 0.0;
         load_data(data_loader, num_classes);
 
         for (int j = 0; j < batch_size; ++j) {
@@ -54,14 +55,21 @@ int main() {
             forward_pass(nn, features);
             backward_pass(nn, features, targets);
 
+            double loss = loss_func(nn->loss_func, nn->predicts, targets, num_classes);
+            total_loss += loss;
+            
             if (i % 10 == 0) {
-                printf("  Image: %d\n  Loss: %f\n", j + 1, loss_func(nn->loss_func, nn->predicts, targets, num_classes));
+                printf("  Image: %d\n  Loss: %f\n", j + 1, loss);
                 print_vector("    Predicts:\t", nn->predicts, num_classes);
                 print_vector("    Targets:\t", targets, num_classes);
                 printf("\n");
             }
 
             free(targets);
+        }
+
+        if (i % 10 == 0) {
+            printf("Total loss: %f\n\n", total_loss / batch_size);
         }
     }
 

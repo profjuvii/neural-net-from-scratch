@@ -87,3 +87,9 @@ void image2vector(const char *filename, float *buffer, int *size) {
     png_destroy_read_struct(&png, &info, NULL);
     fclose(fp);
 }
+
+void normalize_vector(float *vector, int size, float mean, float std) {
+    for (int i = 0; i < size; ++i) {
+        vector[i] = (vector[i] - mean) / std;
+    }
+}

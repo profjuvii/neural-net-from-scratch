@@ -4,6 +4,14 @@
 #include <string.h>
 #include "data_loader.h"
 
+void print_v(char *text, float *vector, int size) {
+    printf("%s\n", text);
+    for (int i = 0; i < size; ++i) {
+        printf("%*f ", 12, vector[i]);
+    }
+    printf("\n\n");
+}
+
 DataLoader* create_data_loader(int batch_size, int input_size, char *path) {
     DataLoader *data_loader = (DataLoader *)malloc(sizeof(DataLoader));
 
@@ -69,7 +77,11 @@ int load_data(DataLoader *data_loader, int num_classes) {
 
         int size = 0;
         image2vector(file_path, data_loader->vectors[i], &size);
+        normalize_vector(data_loader->vectors[i], data_loader->input_size, 0.5, 0.5);
+
         data_loader->labels[i] = label;
+        
+        // print_v(file_path, data_loader->vectors[i], data_loader->input_size);
 
         if (data_loader->input_size != size) return -1;
 
