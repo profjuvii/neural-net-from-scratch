@@ -3,7 +3,17 @@
 #include <math.h>
 #include "braincraft.h"
 
-NeuralNetwork* create_network(int num_layers, Optimizer optimizer, LossFunction loss_func, float learning_rate, float momentum, float beta1, float beta2) {
+NeuralNetwork* create_network(
+    int num_layers,
+    Optimizer optimizer,
+    LossFunction loss_func,
+    float learning_rate,
+    float momentum,
+    float beta1,
+    float beta2,
+    Regularization reg,
+    float reg_param
+) {
     NeuralNetwork *nn = (NeuralNetwork *)malloc(sizeof(NeuralNetwork));
     if (nn == NULL) {
         fprintf(stderr, "Error: Failed to allocate memory for NeuralNetwork.\n");
@@ -24,6 +34,8 @@ NeuralNetwork* create_network(int num_layers, Optimizer optimizer, LossFunction 
     nn->momentum = momentum;
     nn->beta1 = beta1;
     nn->beta2 = beta2;
+    nn->reg = reg;
+    nn->reg_param = reg_param;
 
     return nn;
 }
@@ -38,9 +50,9 @@ void destroy_layer(Layer *layer) {
         if (layer->neurons[i].v != NULL) free(layer->neurons[i].v);
     }
     
-    free(layer->neurons);
-    free(layer->outputs);
-    free(layer->sums);
+    if (layer->neurons != NULL) free(layer->neurons);
+    if (layer->outputs != NULL) free(layer->outputs);
+    if (layer->sums != NULL) free(layer->sums);
 }
 
 void destroy_network(NeuralNetwork *nn) {
@@ -162,8 +174,69 @@ float* copy_vector(float *vector, int size) {
     return copy;
 }
 
+void l1_reg(Layer *layer, float *losses, float lambda) {
+    for (int i = 0; i < layer->output_size; ++i) {
+        Neuron *neuron = &layer->neurons[i];
+        float sum = 0.0;
+
+        for (int j = 0; j < layer->input_size; ++j) {
+            sum += fabs(neuron->weights[j]);
+        }
+
+        losses[i] += lambda * sum;
+    }
+}
+
+void l2_reg(Layer *layer, float *losses, float lambda) {
+    for (int i = 0; i < layer->output_size; ++i) {
+        Neuron *neuron = &layer->neurons[i];
+        float sum = 0.0;
+
+        for (int j = 0; j < layer->input_size; ++j) {
+            sum += neuron->weights[j] * neuron->weights[j];
+        }
+
+        losses[i] += lambda * sum;
+    }
+}
+
+void loss_regularization(Regularization reg, Layer *layer, float *losses, float lambda) {
+    switch (reg) {
+        case L1:
+            l1_reg(layer, losses, lambda);
+            break;
+        case L2:
+            l2_reg(layer, losses, lambda);
+            break;
+        default:
+            return;
+    }
+}
+
+void weight_regularization(Regularization reg, float weight, float *grad_weight, float lambda) {
+    switch (reg) {
+        case L1: 
+            if (weight != 0) {
+                *grad_weight += lambda * (weight > 0 ? 1 : -1);
+            }
+            break;
+        case L2:
+            *grad_weight += 2 * lambda * weight;
+            if (isnan(*grad_weight)) {
+                fprintf(stderr, "Error: Gradient weight is NaN. Regularization: L2, Weight: %f, Lambda: %f\n",
+                    weight, lambda);
+                exit(1);
+            }
+            break;
+        default:
+            return;
+    }
+}
+
 int backward_pass(NeuralNetwork *nn, float *inputs, float *targets) {
     float learning_rate = nn->learning_rate;
+    Regularization reg = nn->reg;
+    float lambda = nn->reg_param;
     Layer *output_layer = &nn->layers[nn->num_layers - 1];
 
     float *loss_grads = (float *)malloc(output_layer->output_size * sizeof(float));
@@ -177,6 +250,9 @@ int backward_pass(NeuralNetwork *nn, float *inputs, float *targets) {
         for (int i = 0; i < output_layer->output_size; ++i) {
             loss_grads[i] = output_layer->outputs[i] - targets[i];
         }
+
+        // Apply regularization to the loss values
+        loss_regularization(reg, output_layer, loss_grads, lambda);
         
         Layer *prev_layer = &nn->layers[nn->num_layers - 2];
         
@@ -184,6 +260,10 @@ int backward_pass(NeuralNetwork *nn, float *inputs, float *targets) {
         for (int i = 0; i < output_layer->output_size; ++i) {
             for (int j = 0; j < prev_layer->output_size; ++j) {
                 float grad_weight = loss_grads[i] * prev_layer->outputs[j];
+
+                // Apply regularization to the weight gradients
+                weight_regularization(reg, output_layer->neurons[i].weights[j], &grad_weight, lambda);
+
                 output_layer->neurons[i].weights[j] -= learning_rate * grad_weight;
             }
             output_layer->neurons[i].bias -= learning_rate * loss_grads[i]; 
@@ -195,6 +275,9 @@ int backward_pass(NeuralNetwork *nn, float *inputs, float *targets) {
             loss_grads[i] = 2 * (output_layer->outputs[i] - targets[i]) / output_layer->output_size;
         }
 
+        // Apply regularization to the loss values
+        loss_regularization(reg, output_layer, loss_grads, lambda);
+
         Layer *prev_layer = &nn->layers[nn->num_layers - 2];
         
         // Update the weights and biases in the last layer
@@ -202,7 +285,12 @@ int backward_pass(NeuralNetwork *nn, float *inputs, float *targets) {
             float delta = loss_grads[i] * activation_func_grad(output_layer->activation_func, output_layer->outputs[i], output_layer->alpha);
 
             for (int j = 0; j < prev_layer->output_size; ++j) {
-                output_layer->neurons[i].weights[j] -= learning_rate * delta * prev_layer->outputs[j];
+                float grad_weight = delta * prev_layer->outputs[j];
+
+                // Apply regularization to the weight gradients
+                weight_regularization(reg, output_layer->neurons[i].weights[j], &grad_weight, lambda);
+
+                output_layer->neurons[i].weights[j] -= learning_rate * grad_weight;
             }
             output_layer->neurons[i].bias -= learning_rate * delta;
         }
@@ -246,6 +334,9 @@ int backward_pass(NeuralNetwork *nn, float *inputs, float *targets) {
             // Compute the weight gradients of the current layer
             for (int j = 0; j < layer->input_size; ++j) {
                 weight_grads[j] = grads[i] * (l > 0 ? prev_layer->outputs[j] : inputs[j]);
+
+                // Apply regularization to the weight gradients
+                weight_regularization(reg, layer->neurons[i].weights[j], &weight_grads[j], lambda);
             }
 
             switch (nn->optimizer) {
