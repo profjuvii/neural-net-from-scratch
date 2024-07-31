@@ -33,10 +33,6 @@ int main() {
 
     // Training loop
     for (int i = 0; i <= num_epochs; ++i) {
-        if (i % 10 == 0) {
-            printf("Iteration: %d\n", i);
-        }
-
         if (load_data(data_loader, num_classes) == -1) {
             fprintf(stderr, "Error: Failed to load data.\n");
             break;
@@ -65,6 +61,7 @@ int main() {
         }
 
         if (i % 10 == 0) {
+            printf("Iteration: %d\n", i);
             printf("Total loss: %f\n\n", total_loss / batch_size);
         }
     }
