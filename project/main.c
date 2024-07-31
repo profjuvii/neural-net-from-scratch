@@ -8,22 +8,21 @@
 int main() {
     srand((unsigned int)time(NULL));
 
-    int num_layers = 4;
+    int num_layers = 3;
 
-    int input_size = 784;
+    int input_size = 28 * 28;
     int num_classes = 10;
 
-    float learning_rate = 0.002;
+    float learning_rate = 0.001;
     float momentum = 0.9;
     float beta1 = 0.9;
     float beta2 = 0.999;
 
-    NeuralNetwork *nn = create_network(num_layers, ADAM, CROSS_ENTROPY, learning_rate, momentum, beta1, beta2, L2, 0.01);
+    NeuralNetwork *nn = create_network(num_layers, ADAM, CROSS_ENTROPY, learning_rate, momentum, beta1, beta2, NONE, 0.0);
 
-    init_layer(&nn->layers[0], input_size, 256, RELU, 0.0);
-    init_layer(&nn->layers[1], 256, 128, RELU, 0.0);
-    init_layer(&nn->layers[2], 128, 64, RELU, 0.0);
-    init_layer(&nn->layers[3], 64, num_classes, SOFTMAX, 0.0);
+    init_layer(&nn->layers[0], input_size, 128, RELU, 0.0);
+    init_layer(&nn->layers[1], 128, 64, RELU, 0.0);
+    init_layer(&nn->layers[2], 64, num_classes, SOFTMAX, 0.0);
 
     int batch_size = 64;
     char *path = "/Users/profjuvi/Datasets/MNIST/";
@@ -57,8 +56,8 @@ int main() {
             
             if (i % 10 == 0) {
                 printf("  Image: %d\n  Loss: %f\n", j + 1, loss);
-                print_vector("    Predicts:\t", nn->predicts, num_classes, 8, 6);
-                print_vector("    Targets:\t", targets, num_classes, 8, 6);
+                print_vector("    Predicts:\t", nn->predicts, num_classes, 10, 6);
+                print_vector("    Targets:\t", targets, num_classes, 10, 0);
                 printf("\n");
             }
 
