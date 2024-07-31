@@ -60,4 +60,7 @@ void init_layer(Layer *layer, int input_size, int output_size, ActivationFunctio
 void forward_pass(NeuralNetwork *nn, float *inputs);
 int backward_pass(NeuralNetwork *nn, float *inputs, float *targets);
 
+int save_network(NeuralNetwork *nn, const char *path, const char *model_name);
+NeuralNetwork* load_network(const char* path);
+
 #endif // BRAINCRAFT_H

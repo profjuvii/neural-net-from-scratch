@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include "braincraft.h"
 
@@ -366,4 +367,152 @@ int backward_pass(NeuralNetwork *nn, float *inputs, float *targets) {
     free(next_grads);
 
     return 0;
+}
+
+int save_network(NeuralNetwork *nn, const char *path, const char *model_name) {
+    if (nn == NULL) {
+        fprintf(stderr, "Error: Failed to save neural network. Network is NULL.\n");
+        return 1;
+    }
+
+    char file_path[256];
+    if ((path && strlen(path) > 0) && (model_name && strlen(model_name) > 0)) {
+        sprintf(file_path, "%s%s.bin", path, model_name);
+    } else if (!path && (model_name && strlen(model_name) > 0)) {
+        sprintf(file_path, "%s.bin", model_name);
+    } else if ((path && strlen(path) > 0) && !model_name) {
+        sprintf(file_path, "%smodel.bin", path);
+    } else if (!path && !model_name) {
+        sprintf(file_path, "model.bin");
+    }
+
+    FILE *fp = fopen(file_path, "wb");
+    if (fp == NULL) {
+        fprintf(stderr, "Error: Could not open file for writing.\n");
+        return 1;
+    }
+
+    fwrite(&nn->num_layers, sizeof(int), 1, fp);
+    fwrite(&nn->learning_rate, sizeof(float), 1, fp);
+    fwrite(&nn->momentum, sizeof(float), 1, fp);
+    fwrite(&nn->beta1, sizeof(float), 1, fp);
+    fwrite(&nn->beta2, sizeof(float), 1, fp);
+    fwrite(&nn->reg, sizeof(Regularization), 1, fp);
+    fwrite(&nn->reg_param, sizeof(float), 1, fp);
+    fwrite(&nn->optimizer, sizeof(Optimizer), 1, fp);
+    fwrite(&nn->loss_func, sizeof(LossFunction), 1, fp);
+
+    for (int i = 0; i < nn->num_layers; ++i) {
+        Layer *layer = &nn->layers[i];
+        fwrite(&layer->input_size, sizeof(int), 1, fp);
+        fwrite(&layer->output_size, sizeof(int), 1, fp);
+        fwrite(&layer->activation_func, sizeof(ActivationFunction), 1, fp);
+        fwrite(&layer->alpha, sizeof(float), 1, fp);
+
+        for (int j = 0; j < layer->output_size; ++j) {
+            Neuron *neuron = &layer->neurons[j];
+            fwrite(neuron->weights, sizeof(float), layer->input_size, fp);
+            fwrite(&neuron->bias, sizeof(float), 1, fp);
+            fwrite(neuron->velocity, sizeof(float), layer->input_size, fp);
+            fwrite(neuron->m, sizeof(float), layer->input_size, fp);
+            fwrite(neuron->v, sizeof(float), layer->input_size, fp);
+        }
+    }
+
+    fclose(fp);
+    return 0;
+}
+
+NeuralNetwork* load_network(const char* path) {
+    if (path == NULL || strlen(path) == 0) {
+        fprintf(stderr, "Error: Failed to load neural network. Path is empty.\n");
+        return NULL;
+    }
+
+    FILE *fp = fopen(path, "rb");
+    if (fp == NULL) {
+        fprintf(stderr, "Error: Could not open file for reading.\n");
+        return NULL;
+    }
+
+    NeuralNetwork *nn = (NeuralNetwork*)malloc(sizeof(NeuralNetwork));
+    if (nn == NULL) {
+        fprintf(stderr, "Error: Memory allocation failed.\n");
+        fclose(fp);
+        return NULL;
+    }
+
+    fread(&nn->num_layers, sizeof(int), 1, fp);
+    fread(&nn->learning_rate, sizeof(float), 1, fp);
+    fread(&nn->momentum, sizeof(float), 1, fp);
+    fread(&nn->beta1, sizeof(float), 1, fp);
+    fread(&nn->beta2, sizeof(float), 1, fp);
+    fread(&nn->reg, sizeof(Regularization), 1, fp);
+    fread(&nn->reg_param, sizeof(float), 1, fp);
+    fread(&nn->optimizer, sizeof(Optimizer), 1, fp);
+    fread(&nn->loss_func, sizeof(LossFunction), 1, fp);
+
+    nn->layers = (Layer *)malloc(nn->num_layers * sizeof(Layer));
+    if (nn->layers == NULL) {
+        fprintf(stderr, "Error: Failed to allocate memory for layers.\n");
+        free(nn);
+        fclose(fp);
+        return NULL;
+    }
+
+    for (int i = 0; i < nn->num_layers; ++i) {
+        Layer *layer = &nn->layers[i];
+        fread(&layer->input_size, sizeof(int), 1, fp);
+        fread(&layer->output_size, sizeof(int), 1, fp);
+        fread(&layer->activation_func, sizeof(ActivationFunction), 1, fp);
+        fread(&layer->alpha, sizeof(float), 1, fp);
+
+        layer->neurons = (Neuron *)malloc(layer->output_size * sizeof(Neuron));
+        layer->sums = (float *)malloc(layer->output_size * sizeof(float));
+        layer->outputs = (float *)malloc(layer->output_size * sizeof(float));
+        if (!layer->neurons || !layer->sums || !layer->sums) {
+            fprintf(stderr, "Error: Failed to allocate memory for neurons.\n");
+            free(nn->layers);
+            free(nn);
+            fclose(fp);
+            return NULL;
+        }
+
+        for (int j = 0; j < layer->output_size; ++j) {
+            Neuron *neuron = &layer->neurons[j];
+
+            neuron->weights = (float *)malloc(layer->input_size * sizeof(float));
+            if (neuron->weights == NULL) {
+                fprintf(stderr, "Error: Failed to allocate memory for neuron weights.\n");
+                free(layer->neurons);
+                free(nn->layers);
+                free(nn);
+                fclose(fp);
+                return NULL;
+            }
+            fread(neuron->weights, sizeof(float), layer->input_size, fp);
+            fread(&neuron->bias, sizeof(float), 1, fp);
+
+            neuron->velocity = (float *)malloc(layer->input_size * sizeof(float));
+            neuron->m = (float *)malloc(layer->input_size * sizeof(float));
+            neuron->v = (float *)malloc(layer->input_size * sizeof(float));
+            if (!neuron->velocity || !neuron->m || !neuron->v) {
+                fprintf(stderr, "Error: Failed to allocate memory for optimizer parameters.\n");
+                free(neuron->weights);
+                free(layer->neurons);
+                free(nn->layers);
+                free(nn);
+                fclose(fp);
+                return NULL;
+            }
+            fread(neuron->velocity, sizeof(float), layer->input_size, fp);
+            fread(neuron->m, sizeof(float), layer->input_size, fp);
+            fread(neuron->v, sizeof(float), layer->input_size, fp);
+        }
+    }
+
+    nn->predicts = (float *)malloc(nn->layers[nn->num_layers-1].output_size * sizeof(float));
+
+    fclose(fp);
+    return nn;
 }

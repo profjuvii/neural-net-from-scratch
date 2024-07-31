@@ -10,3 +10,13 @@ void print_vector(const char *text, const float *vector, int size, int width, in
     }
     printf("\n");
 }
+
+int find_max_index(const float *vector, int size) {
+    int pos = 0;
+    for (int i = 0; i < size; ++i) {
+        if (vector[pos] < vector[i]) {
+            pos = i;
+        }
+    }
+    return pos;
+}

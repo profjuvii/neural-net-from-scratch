@@ -5,13 +5,8 @@
 #include "data_loader.h"
 #include "utils.h"
 
-int main() {
-    srand((unsigned int)time(NULL));
-
+void training_model(int input_size, int num_classes) {
     int num_layers = 3;
-
-    int input_size = 28 * 28;
-    int num_classes = 10;
 
     float learning_rate = 0.001;
     float momentum = 0.9;
@@ -25,13 +20,11 @@ int main() {
     init_layer(&nn->layers[2], 64, num_classes, SOFTMAX, 0.0);
 
     int batch_size = 64;
-    char *path = "/Users/profjuvi/Datasets/MNIST/";
+    char *dataset_path = "/Users/profjuvi/Datasets/MNIST/";
 
-    DataLoader *data_loader = create_data_loader(batch_size, input_size, path);
+    DataLoader *data_loader = create_data_loader(batch_size, input_size, dataset_path);
 
     int num_epochs = 1000;
-
-    // Training loop
     for (int i = 0; i <= num_epochs; ++i) {
         if (load_data(data_loader, num_classes) == -1) {
             fprintf(stderr, "Error: Failed to load data.\n");
@@ -52,8 +45,8 @@ int main() {
             
             if (i % 10 == 0) {
                 printf("  Image: %d\n  Loss: %f\n", j + 1, loss);
-                print_vector("    Predicts:\t", nn->predicts, num_classes, 10, 6);
-                print_vector("    Targets:\t", targets, num_classes, 10, 0);
+                print_vector("    Predicts: ", nn->predicts, num_classes, 8, 2);
+                print_vector("    Targets:  ", targets, num_classes, 8, 2);
                 printf("\n");
             }
 
@@ -66,8 +59,55 @@ int main() {
         }
     }
 
+    char *models_path = "/Users/profjuvi/neural-net-from-scratch/models/";
+
+    if (save_network(nn, models_path, "model_v1") == 0) {
+        printf("The model was successfully saved.\n");
+    }
+
     destroy_data_loader(data_loader);
     destroy_network(nn);
+}
 
+void testing_model(NeuralNetwork *nn, int input_size, int num_classes) {
+    char *dataset_path = "/Users/profjuvi/Datasets/MNIST/";
+    DataLoader *data_loader = create_data_loader(1, input_size, dataset_path);
+
+    int test_size = 100;
+    int correct_predicts = 0;
+
+    for (int i = 0; i < test_size; ++i) {
+        load_data(data_loader, num_classes);
+
+        int label = data_loader->labels[0];
+        float *features = data_loader->vectors[0];
+
+        forward_pass(nn, features);
+
+        int max_index = find_max_index(nn->predicts, num_classes);
+        correct_predicts += label == max_index;
+
+        printf("Number %d: %s\n", label, label == max_index ? "True" : "False");
+    }
+
+    printf("Accuracy: %.1f%%\n", (float)correct_predicts / test_size * 100);
+    
+    destroy_data_loader(data_loader);
+}
+
+int main() {
+    srand((unsigned int)time(NULL));
+
+    int input_size = 28 * 28;
+    int num_classes = 10;
+
+    training_model(input_size, num_classes);
+
+    char *nn_path = "/Users/profjuvi/neural-net-from-scratch/models/model_v1.bin";
+    NeuralNetwork *nn = load_network(nn_path);
+
+    testing_model(nn, input_size, num_classes);
+
+    destroy_network(nn);
     return 0;
 }
