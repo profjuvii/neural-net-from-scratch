@@ -13,7 +13,7 @@ void training_model(int input_size, int num_classes) {
     float beta1 = 0.9;
     float beta2 = 0.999;
 
-    NeuralNetwork *nn = create_network(num_layers, ADAM, CROSS_ENTROPY, learning_rate, momentum, beta1, beta2, NONE, 0.0);
+    NeuralNetwork *nn = create_network(num_layers, ADAM, CROSS_ENTROPY, momentum, beta1, beta2, NONE, 0.0);
 
     init_layer(&nn->layers[0], input_size, 128, RELU, 0.0);
     init_layer(&nn->layers[1], 128, 64, RELU, 0.0);
@@ -38,20 +38,23 @@ void training_model(int input_size, int num_classes) {
             float *targets = create_targets(num_classes, data_loader->labels[j]);
 
             forward_pass(nn, features);
-            backward_pass(nn, features, targets);
+            compute_gradients(nn, features, targets);
 
             double loss = loss_func(nn->loss_func, nn->predicts, targets, num_classes);
             total_loss += loss;
-            
-            if (i % 10 == 0) {
-                printf("  Image: %d\n  Loss: %f\n", j + 1, loss);
-                print_vector("    Predicts: ", nn->predicts, num_classes, 8, 2);
-                print_vector("    Targets:  ", targets, num_classes, 8, 2);
-                printf("\n");
-            }
+
+            // if (i % 10 == 0) {
+            //     printf("  Image: %d\n  Loss: %f\n", j + 1, loss);
+            //     print_vector("    Predicts: ", nn->predicts, num_classes, 8, 2);
+            //     print_vector("    Targets:  ", targets, num_classes, 8, 2);
+            //     printf("\n");
+            // }
 
             free(targets);
         }
+
+        update_weights(nn, learning_rate);
+        init_zero_gradients(nn);
 
         if (i % 10 == 0) {
             printf("Iteration: %d\n", i);
@@ -71,16 +74,16 @@ void training_model(int input_size, int num_classes) {
 
 void testing_model(NeuralNetwork *nn, int input_size, int num_classes) {
     char *dataset_path = "/Users/profjuvi/Datasets/MNIST/";
-    DataLoader *data_loader = create_data_loader(1, input_size, dataset_path);
+    DataLoader *data_loader = create_data_loader(64, input_size, dataset_path);
 
-    int test_size = 100;
+    int test_size = 1;
     int correct_predicts = 0;
 
     for (int i = 0; i < test_size; ++i) {
         load_data(data_loader, num_classes);
 
-        int label = data_loader->labels[0];
-        float *features = data_loader->vectors[0];
+        int label = data_loader->labels[i];
+        float *features = data_loader->vectors[i];
 
         forward_pass(nn, features);
 
