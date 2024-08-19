@@ -4,7 +4,7 @@
 #include "activation_funcs.h"
 
 float relu(float x) {
-    return x > 0 ? x : 0;
+    return fmaxf(0, x);
 }
 
 float leaky_relu(float x, float alpha) {

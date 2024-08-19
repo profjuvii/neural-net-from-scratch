@@ -95,30 +95,72 @@ void init_layer(Layer *layer, int input_size, int output_size, ActivationFunctio
         return;
     }
 
-    float limit = sqrt(6.0 / (input_size + output_size));
+    float limit;
+    switch (activation_func) {
+        case RELU:
+        case LEAKY_RELU:
+            limit = sqrt(2.0 / input_size);
+            break;
+        case SIGMOID:
+        case TANH:
+            limit = sqrt(2.0 / (input_size + output_size));
+            break;
+        case LINEAR:
+        case SOFTMAX:
+            limit = sqrt(1.0 / input_size);
+            break;
+        default:
+            limit = sqrt(1.0 / input_size);
+            break;
+    }
 
     for (int i = 0; i < output_size; ++i) {
         layer->neurons[i].weights = (float *)malloc(input_size * sizeof(float));
-        if (layer->neurons[i].weights == NULL) {
-            fprintf(stderr, "Error: Failed to allocate memory for neuron weights.\n");
-            // Handle memory cleanup for previously allocated neurons
-            for (int k = 0; k < i; ++k) {
-                free(layer->neurons[k].weights);
-            }
-            free(layer->neurons);
-            free(layer->activations);
-            free(layer->sums);
-            return;
-        }
         layer->neurons[i].weight_grads = (float *)malloc(input_size * sizeof(float));
         layer->neurons[i].velocity = (float *)malloc(input_size * sizeof(float));
         layer->neurons[i].m = (float *)malloc(input_size * sizeof(float));
         layer->neurons[i].v = (float *)malloc(input_size * sizeof(float));
 
+        if (layer->neurons[i].weights == NULL ||
+            layer->neurons[i].weight_grads == NULL ||
+            layer->neurons[i].velocity == NULL ||
+            layer->neurons[i].m == NULL ||
+            layer->neurons[i].v == NULL) {
+            fprintf(stderr, "Error: Failed to allocate memory for neuron components.\n");
+
+            for (int k = 0; k < i; ++k) {
+                free(layer->neurons[k].weights);
+                free(layer->neurons[k].weight_grads);
+                free(layer->neurons[k].velocity);
+                free(layer->neurons[k].m);
+                free(layer->neurons[k].v);
+            }
+            
+            free(layer->neurons);
+            free(layer->activations);
+            free(layer->sums);
+            return;
+        }
+
         for (int j = 0; j < input_size; ++j) {
             layer->neurons[i].weights[j] = (float)rand() / RAND_MAX * 2 * limit - limit;
         }
-        layer->neurons[i].bias = (float)rand() / RAND_MAX * 2 * limit - limit;
+
+        switch (activation_func) {
+            case RELU:
+            case LEAKY_RELU:
+            case SIGMOID:
+            case TANH:
+                layer->neurons[i].bias = 0.0f;
+                break;
+            case LINEAR:
+            case SOFTMAX:
+                layer->neurons[i].bias = (float)rand() / RAND_MAX * 2 * limit - limit;
+                break;
+            default:
+                layer->neurons[i].bias = 0.0f;
+                break;
+        }
     }
 }
 
@@ -369,11 +411,11 @@ int save_network(NeuralNetwork *nn, const char *path, const char *model_name) {
 
     char file_path[256];
     if ((path && strlen(path) > 0) && (model_name && strlen(model_name) > 0)) {
-        sprintf(file_path, "%s%s.bin", path, model_name);
+        sprintf(file_path, "%s/%s.bin", path, model_name);
     } else if (!path && (model_name && strlen(model_name) > 0)) {
         sprintf(file_path, "%s.bin", model_name);
     } else if ((path && strlen(path) > 0) && !model_name) {
-        sprintf(file_path, "%smodel.bin", path);
+        sprintf(file_path, "%s/model.bin", path);
     } else if (!path && !model_name) {
         sprintf(file_path, "model.bin");
     }

@@ -45,38 +45,48 @@ void image2vector(const char *filename, float *buffer, int *size) {
         case PNG_COLOR_TYPE_GRAY:
             for (int y = 0; y < height; ++y) {
                 png_bytep row = row_pointers[y];
+
                 for (int x = 0; x < width; ++x) {
                     png_byte px = row[x];
                     buffer[y * width + x] = (float)px / 255.0;
                 }
             }
             break;
+            
         case PNG_COLOR_TYPE_RGB:
             for (int y = 0; y < height; ++y) {
                 png_bytep row = row_pointers[y];
+
                 for (int x = 0; x < width; ++x) {
                     png_bytep px = &(row[x * 3]);
+
                     float r = (float)px[0] / 255.0;
                     float g = (float)px[1] / 255.0;
                     float b = (float)px[2] / 255.0;
+
                     float pixel_value = 0.299 * r + 0.587 * g + 0.114 * b;
                     buffer[y * width + x] = pixel_value;
                 }
             }
             break;
+
         case PNG_COLOR_TYPE_RGBA:
             for (int y = 0; y < height; ++y) {
                 png_bytep row = row_pointers[y];
+
                 for (int x = 0; x < width; ++x) {
                     png_bytep px = &(row[x * 4]);
+
                     float r = (float)px[0] / 255.0;
                     float g = (float)px[1] / 255.0;
                     float b = (float)px[2] / 255.0;
+                    
                     float pixel_value = 0.299 * r + 0.587 * g + 0.114 * b;
                     buffer[y * width + x] = pixel_value;
                 }
             }
             break;
+
         default:
             fprintf(stderr, "Unsupported color type: %d\n", color_type);
             png_destroy_read_struct(&png, &info, NULL);
