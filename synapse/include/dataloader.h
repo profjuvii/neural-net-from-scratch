@@ -1,6 +1,9 @@
 #ifndef DATALOADER_H
 #define DATALOADER_H
 
+extern float mean_param;
+extern float std_param;
+
 typedef struct {
     float *features;
     int label;
@@ -15,8 +18,6 @@ typedef struct {
 
 DataLoader* create_dataloader(char* dataset_path, int batch_size, int input_size);
 void destroy_dataloader(DataLoader *dataloader);
+int get_next_batch(DataLoader *dataloader, int num_classes, int flag);
 
-int get_next_batch(DataLoader *dataloader, int num_classes);
-float* create_targets(int num_classes, int label);
-
-#endif // DATALOADER_H
+#endif

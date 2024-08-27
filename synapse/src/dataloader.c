@@ -4,6 +4,10 @@
 #include <string.h>
 #include "dataloader.h"
 #include "image2vector.h"
+#include "utils.h"
+
+float mean_param = 0.5f;
+float std_param = 0.5f;
 
 void destroy_batch(Sample *batch, int size) {
     if (!batch) return;
@@ -51,7 +55,7 @@ DataLoader* create_dataloader(char* dataset_path, int batch_size, int input_size
     return dataloader;
 }
 
-int get_next_batch(DataLoader *dataloader, int num_classes) {
+int get_next_batch(DataLoader *dataloader, int num_classes, int flag) {
     int images_per_class = dataloader->batch_size / num_classes;
     int remaining_images = dataloader->batch_size % num_classes;
 
@@ -81,8 +85,8 @@ int get_next_batch(DataLoader *dataloader, int num_classes) {
         }
         closedir(dir);
 
-        int num_to_pick = images_per_class + (remaining_images > 0 ? 1 : 0);
-        remaining_images = remaining_images > 0 ? remaining_images - 1 : 0;
+        int num_to_pick = images_per_class + ((remaining_images > 0) ? 1 : 0);
+        remaining_images = (remaining_images > 0) ? remaining_images - 1 : 0;
 
         for (int i = 0; i < num_to_pick; ++i) {
             int file_index = rand() % file_count;
@@ -91,18 +95,14 @@ int get_next_batch(DataLoader *dataloader, int num_classes) {
             char file_path[512];
             snprintf(file_path, sizeof(file_path), "%s/%s", dir_path, file_name);
 
-            int size = 0;
-            image2vector(file_path, dataloader->batch[batch_index].features, &size);
-            // printf("%s\n", file_path);
-            if (dataloader->input_size != size) {
-                free(file_names);
-                return -1;
+            image2vector(file_path, dataloader->batch[batch_index].features);
+            
+            if (flag) {
+                normalize_vector(dataloader->batch[batch_index].features, dataloader->input_size, mean_param, std_param);
             }
 
-            normalize_vector(dataloader->batch[batch_index].features, dataloader->input_size, 0.5, 0.5);
             dataloader->batch[batch_index].label = label;
-
-            batch_index++;
+            ++batch_index;
         }
 
         for (int j = 0; j < file_count; ++j) {
@@ -112,10 +112,4 @@ int get_next_batch(DataLoader *dataloader, int num_classes) {
     }
 
     return 0;
-}
-
-float* create_targets(int num_classes, int label) {
-    float *targets = (float *)calloc(num_classes, sizeof(float));
-    targets[label] = 1.0;
-    return targets;
 }

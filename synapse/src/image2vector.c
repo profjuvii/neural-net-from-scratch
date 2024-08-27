@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <png.h>
 
-void image2vector(const char *filename, float *buffer, int *size) {
-    FILE *fp = fopen(filename, "rb");
+void image2vector(const char *path, float *features) {
+    FILE *fp = fopen(path, "rb");
     if (fp == NULL) {
-        fprintf(stderr, "Error: Failed to open file %s.\n", filename);
+        fprintf(stderr, "Error: Failed to open file %s.\n", path);
         return;
     }
 
@@ -39,8 +39,6 @@ void image2vector(const char *filename, float *buffer, int *size) {
     int height = png_get_image_height(png, info);
     png_byte color_type = png_get_color_type(png, info);
 
-    *size = width * height;
-
     switch (color_type) {
         case PNG_COLOR_TYPE_GRAY:
             for (int y = 0; y < height; ++y) {
@@ -48,7 +46,7 @@ void image2vector(const char *filename, float *buffer, int *size) {
 
                 for (int x = 0; x < width; ++x) {
                     png_byte px = row[x];
-                    buffer[y * width + x] = (float)px / 255.0;
+                    features[y * width + x] = (float)px / 255.0f;
                 }
             }
             break;
@@ -60,12 +58,12 @@ void image2vector(const char *filename, float *buffer, int *size) {
                 for (int x = 0; x < width; ++x) {
                     png_bytep px = &(row[x * 3]);
 
-                    float r = (float)px[0] / 255.0;
-                    float g = (float)px[1] / 255.0;
-                    float b = (float)px[2] / 255.0;
+                    float r = (float)px[0] / 255.0f;
+                    float g = (float)px[1] / 255.0f;
+                    float b = (float)px[2] / 255.0f;
 
-                    float pixel_value = 0.299 * r + 0.587 * g + 0.114 * b;
-                    buffer[y * width + x] = pixel_value;
+                    float pixel_value = 0.299f * r + 0.587f * g + 0.114f * b;
+                    features[y * width + x] = pixel_value;
                 }
             }
             break;
@@ -77,12 +75,12 @@ void image2vector(const char *filename, float *buffer, int *size) {
                 for (int x = 0; x < width; ++x) {
                     png_bytep px = &(row[x * 4]);
 
-                    float r = (float)px[0] / 255.0;
-                    float g = (float)px[1] / 255.0;
-                    float b = (float)px[2] / 255.0;
+                    float r = (float)px[0] / 255.0f;
+                    float g = (float)px[1] / 255.0f;
+                    float b = (float)px[2] / 255.0f;
                     
-                    float pixel_value = 0.299 * r + 0.587 * g + 0.114 * b;
-                    buffer[y * width + x] = pixel_value;
+                    float pixel_value = 0.299f * r + 0.587f * g + 0.114f * b;
+                    features[y * width + x] = pixel_value;
                 }
             }
             break;
@@ -96,10 +94,4 @@ void image2vector(const char *filename, float *buffer, int *size) {
 
     png_destroy_read_struct(&png, &info, NULL);
     fclose(fp);
-}
-
-void normalize_vector(float *vector, int size, float mean, float std) {
-    for (int i = 0; i < size; ++i) {
-        vector[i] = (vector[i] - mean) / std;
-    }
 }
