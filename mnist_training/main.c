@@ -1,9 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <synapse.h>
 #include <time.h>
-#include "braincraft.h"
-#include "dataloader.h"
-#include "utils.h"
 
 int main() {
     srand((unsigned int)time(NULL));

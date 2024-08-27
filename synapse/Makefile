@@ -6,16 +6,16 @@ OBJ = $(SRC:src/%.c=obj/%.o)
 
 TARGET = libsynapse.a
 
-all: obj $(TARGET)
+all: obj lib/$(TARGET) clean
 
-obj:
-	mkdir -p obj
-
-$(TARGET): $(OBJ)
+lib/$(TARGET): $(OBJ)
 	ar rcs $@ $^
 
 obj/%.o: src/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
+	
+obj:
+	mkdir -p obj
 
 clean:
-	rm -rf obj $(TARGET)
+	rm -rf obj

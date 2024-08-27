@@ -3,7 +3,7 @@ CFLAGS = -I../synapse/include -I/opt/homebrew/Cellar/libpng/1.6.43/include -Wall
 LDFLAGS = -L../synapse/lib -L/opt/homebrew/Cellar/libpng/1.6.43/lib
 LIBS = -lsynapse -lpng
 
-TARGET = training
+TARGET = classifier
 
 $(TARGET): main.o
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
