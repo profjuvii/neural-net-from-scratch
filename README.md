@@ -73,4 +73,4 @@ This process will use the saved model to recognize digits from images in the `im
 The project is licensed under the terms specified in the `LICENSE` file.
 
 ## Contact
-If you have any questions or suggestions, please contact me at [profjuvi@gmail.com](profjuvi@gmail.com).
+If you have any questions or suggestions, please contact me at [profjuvi@gmail.com](mailto:profjuvi@gmail.com).
