@@ -6,8 +6,14 @@
 #include "image2vector.h"
 #include "utils.h"
 
-float mean_param = 0.5f;
-float std_param = 0.5f;
+static float img_mean_param = 0.5f;
+static float img_std_param = 0.5f;
+
+void set_mean_std_params(const float mean, const float std) {
+    if (std == 0.0f) return;
+    img_mean_param = mean;
+    img_std_param = std;
+}
 
 void destroy_batch(Sample *batch, int size) {
     if (!batch) return;
@@ -23,7 +29,7 @@ void destroy_dataloader(DataLoader *dataloader) {
     free(dataloader);
 }
 
-DataLoader* create_dataloader(char* dataset_path, int batch_size, int input_size) {
+DataLoader* create_dataloader(char* dataset_path, const int batch_size, const int input_size) {
     DataLoader *dataloader = (DataLoader *)malloc(sizeof(DataLoader));
     if (dataloader == NULL) {
         fprintf(stderr, "Error: Failed to allocate memory for dataloader.\n");
@@ -55,7 +61,7 @@ DataLoader* create_dataloader(char* dataset_path, int batch_size, int input_size
     return dataloader;
 }
 
-int get_next_batch(DataLoader *dataloader, int num_classes, int flag) {
+int get_next_batch(DataLoader *dataloader, const int num_classes, const int flag) {
     int images_per_class = dataloader->batch_size / num_classes;
     int remaining_images = dataloader->batch_size % num_classes;
 
@@ -98,6 +104,8 @@ int get_next_batch(DataLoader *dataloader, int num_classes, int flag) {
             image2vector(file_path, dataloader->batch[batch_index].features);
             
             if (flag) {
+                float mean_param = img_mean_param;
+                float std_param = img_std_param;
                 normalize_vector(dataloader->batch[batch_index].features, dataloader->input_size, mean_param, std_param);
             }
 

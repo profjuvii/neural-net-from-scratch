@@ -23,14 +23,14 @@ int main(int argc, char *argv[]) {
     normalize_vector(features, input_size, 0.5f, 0.5f);
 
     // Loading a pre-trained model
-    int num_layers = 0;
     char *model_path = "../models/mnist_classifier.bin";
 
-    Layer *nn = load_network(&num_layers, model_path);
+    load_network(model_path);
 
     // Recognition
-    forward(nn, features, num_layers);
-    int number = index_of_max(nn[num_layers - 1].activations, num_classes);
+    forward(features);
+    float *predicts = get_network_predictions();
+    int number = index_of_max(predicts, num_classes);
 
     // Printing text to the console
     char *phrases[] = {
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     printf("%s %d.\n", phrases[idx], number);
 
     // Free memory
-    destroy_network(nn, num_layers);
+    destroy_network();
 
     return 0;
 }

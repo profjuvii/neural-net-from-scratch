@@ -1,20 +1,40 @@
 #ifndef OPTIMIZERS_H
 #define OPTIMIZERS_H
 
-extern float momentum_param;
-
 typedef enum {
     SGD,
-    MOMENTUM
+    MOMENTUM,
+    ADAGRAD,
+    RMSPROP,
+    ADAM
 } Optimizer;
 
-void apply_optimizer(
-    Optimizer optimizer,
+typedef struct {
+    float *data;
+} OptParams;
+
+typedef OptParams MomentumParams;
+typedef OptParams AdaGradParams;
+typedef OptParams RMSpropParams;
+
+typedef struct {
+    float *m;
+    float *v;
+} AdamParams;
+
+void set_momentum_param(const float momentum);
+void set_adagrad_param(const float epsilon);
+void set_rmsprop_params(const float decay_rate, float epsilon);
+void set_adam_params(const float beta1, float beta2);
+
+void optimize(
+    const Optimizer optimizer,
+    const void *optimizer_params,
     float *weights,
-    float *weight_grads,
-    float *velocity,
-    int size,
-    float learning_rate
+    const float *gradients,
+    const int size,
+    const float learning_rate,
+    const int t
 );
 
 #endif

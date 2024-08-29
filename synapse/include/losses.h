@@ -6,6 +6,7 @@ typedef enum {
     CROSS_ENTROPY
 } LossFunction;
 
-float loss_function(LossFunction loss_function, float *predicts, float *targets, int size);
+float mse(const float *predicts, const float *targets, const int n);
+float cross_entropy(const float *predicts, const float *targets, const int n);
 
 #endif

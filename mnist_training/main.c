@@ -20,18 +20,16 @@ int main() {
     // Initialization of the neural network
     int num_layers = 3;
 
-    Layer *nn = create_network(num_layers);
-    Layer *last_layer = &nn[num_layers - 1];
+    create_network(num_layers);
 
-    init_layer(&nn[0], input_size, 128, RELU);
-    init_layer(&nn[1], 128, 64, RELU);
-    init_layer(&nn[2], 64, num_classes, SOFTMAX);
+    init_layer(input_size, 128, RELU);
+    init_layer(128, 64, RELU);
+    init_layer(64, num_classes, SOFTMAX);
 
-    float *predicts = last_layer->activations;
-    LossFunction loss_func = CROSS_ENTROPY; 
+    setup_loss_function(CROSS_ENTROPY);
+    setup_optimizer(ADAM, 0.001f);
 
     // Model training
-    float learning_rate = 0.0008f;
     int num_epochs = 100;
 
     float *targets = (float *)calloc(num_classes, sizeof(float));
@@ -44,9 +42,9 @@ int main() {
             float *features = dataloader_train->batch[i].features;
             targets[dataloader_train->batch[i].label] = 1.0f;
         
-            forward(nn, features, num_layers);
+            forward(features);
 
-            float loss = loss_function(loss_func, predicts, targets, num_classes);
+            float loss = loss_function(targets);
             total_loss += loss;
 
             if (auto_epoch(epoch, num_epochs)) {
@@ -54,12 +52,13 @@ int main() {
                 printf("  Sample: %d\n  Loss: %.6f\n\n", i + 1, loss);
             }
 
-            compute_gradients(nn, features, targets, num_layers, loss_func);
-            update_weights(nn, num_layers, learning_rate, MOMENTUM);
-            zero_gradients(nn, num_layers);
+            compute_gradients(features, targets);
 
             targets[dataloader_train->batch[i].label] = 0.0f;
         }
+
+        update_weights();
+        zero_gradients();
 
         if (auto_epoch(epoch, num_epochs)) {
             printf("Epoch: %d\nTotal loss: %.6f\n\n", epoch, total_loss / batch_size);
@@ -76,7 +75,8 @@ int main() {
         int label = dataloader_test->batch[i].label;
         targets[label] = 1.0f;
 
-        forward(nn, features, num_layers);
+        forward(features);
+        float *predicts = get_network_predictions();
         correct_predicts += (label == index_of_max(predicts, num_classes));
 
         printf("Number %d: %s\nPredictions: ", label, (label == index_of_max(predicts, num_classes)) ? "True" : "False");
@@ -84,23 +84,25 @@ int main() {
         printf("\n");
 
         targets[label] = 0.0f;
+
+        free(predicts);
     }
 
     float accuracy = (float)correct_predicts / batch_size * 100;
     printf("Accuracy: %.1f%%\n", accuracy);
 
-    // if (accuracy >= 85.0f) {
-    //     save_network(nn, num_layers, "/Users/profjuvi/c-projects/braincraft/models/mnist_classifier*.bin");
-    //     printf("Model saved successfully.\n");
-    // }
+    if (accuracy >= 90.0f) {
+        save_network("/Users/profjuvi/neural-net-from-scratch/models/mnist_classifier*.bin");
+        printf("Model saved successfully.\n");
+    }
 
-    // print_network(nn, num_layers);
+    // print_network();
 
     // Free memory
     free(targets);
     destroy_dataloader(dataloader_train);
     destroy_dataloader(dataloader_test);
-    destroy_network(nn, num_layers);
+    destroy_network();
 
     return 0;
 }

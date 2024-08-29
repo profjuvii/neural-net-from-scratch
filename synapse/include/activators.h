@@ -1,8 +1,6 @@
 #ifndef ACTIVATORS_H
 #define ACTIVATORS_H
 
-extern float leaky_relu_param;
-
 typedef enum {
     LINEAR,
     SIGMOID,
@@ -12,8 +10,10 @@ typedef enum {
     SOFTMAX
 } ActivationFunction;
 
-void softmax(float *inputs, float *outputs, int size);
-float activation_function(ActivationFunction activation_function, float sum);
-float activation_function_derivative(ActivationFunction activation_function, float sum);
+void set_leaky_relu_param(const float alpha);
+
+void softmax(const float *inputs, float *outputs, const int size);
+float activation_function(const ActivationFunction activation_function, const float x);
+float activation_function_derivative(const ActivationFunction activation_function, const float x);
 
 #endif

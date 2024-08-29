@@ -5,167 +5,48 @@
 #include "braincraft.h"
 #include "utils.h"
 
-Layer *create_network(int num_layers) {
-    return (Layer *)malloc(num_layers * sizeof(Layer));
+typedef struct {
+    float *weights;
+    float *weight_grads;
+    float bias;
+    float bias_grad;
+    void *optimizer_params;
+} Neuron;
+
+typedef struct {
+    Neuron *neurons;
+    float *activations;
+    int num_neurons;
+    int input_size;
+    float *weighted_sums;
+    ActivationFunction activation_function;
+} Layer;
+
+static int net_num_layers = 0;
+static int is_network_initialized = 0;
+static Layer *layers = NULL;
+
+static LossFunction net_loss_function = -1;
+
+static float net_learning_rate = 0.01f;
+static Optimizer net_optimizer = SGD;
+
+void create_network(const int num_layers) {
+    if (num_layers <= 0 || num_layers > 20) {
+        fprintf(stderr, "Error: The number of layers must be between 1 and 20.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    layers = (Layer *)malloc(num_layers * sizeof(Layer));
+    if (!layers) {
+        fprintf(stderr, "Error: Memory allocation failed.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    net_num_layers = num_layers;
 }
 
-void destroy_network(Layer *layers, int num_layers) {
-    if (!layers) return;
-
-    for (int l = 0 ; l < num_layers; ++l) {
-        Layer *layer = &layers[l];
-        
-        for (int i = 0; i < layer->num_neurons; ++i) {
-            Neuron *neuron = &layer->neurons[i];
-
-            if (neuron->weights) free(neuron->weights);
-            if (neuron->weight_grads) free(neuron->weight_grads);
-            if (neuron->velocity) free(neuron->velocity);
-        }
-
-        if (layer->neurons) free(layer->neurons);
-        if (layer->weighted_sums) free(layer->weighted_sums);
-        if (layer->activations) free(layer->activations);
-    }
-
-    free(layers);
-}
-
-Layer *load_network(int *num_layers, char *path) {
-    FILE *fp = fopen(path, "rb");
-    if (!fp) {
-        fprintf(stderr, "Failed to open file.\n");
-        return NULL;
-    }
-
-    // Read the number of layers
-    fread(num_layers, sizeof(int), 1, fp);
-
-    // Allocate memory for the layers
-    Layer *nn = (Layer *)malloc(*num_layers * sizeof(Layer));
-    if (!nn) {
-        fprintf(stderr, "Failed to allocate memory for layers.\n");
-        fclose(fp);
-        return NULL;
-    }
-
-    for (int l = 0; l < *num_layers; ++l) {
-        Layer *layer = &nn[l];
-
-        // Read number of neurons and input size
-        fread(&layer->num_neurons, sizeof(int), 1, fp);
-        fread(&layer->input_size, sizeof(int), 1, fp);
-        fread(&layer->activation_function, sizeof(ActivationFunction), 1, fp);
-
-        // Allocate memory for neurons, activations, and weighted_sums
-        layer->neurons = (Neuron *)malloc(layer->num_neurons * sizeof(Neuron));
-        layer->activations = (float *)malloc(layer->num_neurons * sizeof(float));
-        layer->weighted_sums = (float *)malloc(layer->num_neurons * sizeof(float));
-
-        if (!layer->neurons || !layer->activations || !layer->weighted_sums) {
-            fprintf(stderr, "Failed to allocate memory for layer components.\n");
-            fclose(fp);
-            return NULL; // Handle memory allocation failure properly
-        }
-
-        for (int i = 0; i < layer->num_neurons; ++i) {
-            Neuron *neuron = &layer->neurons[i];
-
-            // Allocate memory for neuron weights, gradients, and velocity
-            neuron->weights = (float *)malloc(layer->input_size * sizeof(float));
-            neuron->weight_grads = (float *)calloc(layer->input_size, sizeof(float));
-            neuron->velocity = (float *)calloc(layer->input_size, sizeof(float));
-
-            if (!neuron->weights || !neuron->weight_grads || !neuron->velocity) {
-                fprintf(stderr, "Failed to allocate memory for neuron components.\n");
-                fclose(fp);
-                return NULL; // Handle memory allocation failure properly
-            }
-
-            neuron->bias_grad = 0.0f;
-
-            // Read neuron data
-            fread(&neuron->bias, sizeof(float), 1, fp);
-            fread(neuron->weights, sizeof(float), layer->input_size, fp);
-        }
-    }
-
-    fclose(fp);
-    return nn;
-}
-
-void save_network(Layer *layers, int num_layers, char *path) {
-    FILE *fp = fopen(path, "wb");
-    if (!fp) {
-        fprintf(stderr, "Failed to open file.\n");
-        return;
-    }
-
-    // Write the number of layers
-    fwrite(&num_layers, sizeof(int), 1, fp);
-
-    for (int l = 0; l < num_layers; ++l) {
-        Layer *layer = &layers[l];
-
-        // Write number of neurons and input size
-        fwrite(&layer->num_neurons, sizeof(int), 1, fp);
-        fwrite(&layer->input_size, sizeof(int), 1, fp);
-        fwrite(&layer->activation_function, sizeof(ActivationFunction), 1, fp);
-
-        for (int i = 0; i < layer->num_neurons; ++i) {
-            Neuron *neuron = &layer->neurons[i];
-
-            // Write neuron data
-            fwrite(&neuron->bias, sizeof(float), 1, fp);
-            fwrite(neuron->weights, sizeof(float), layer->input_size, fp);
-        }
-    }
-
-    fclose(fp);
-}
-
-void print_neuron(Neuron neuron, int input_size, int idx) {
-    int width = 24;
-    printf("    Neuron %d:\n", idx + 1);
-
-    // Print a neuron weights and bias
-    printf("%*s", width, "Weights: ");
-    print_vector(neuron.weights, input_size);
-    printf("%*s%.6f\n\n", width, "Bias: ", neuron.bias);
-
-    // Print a neuron gradients
-    printf("%*s", width, "Weight gradients: ");
-    print_vector(neuron.weight_grads, input_size);
-    printf("%*s%.6f\n\n", width, "Bias gradient: ", neuron.bias_grad);
-}
-
-void print_network(Layer *layers, int num_layers) {
-    for (int l = 0; l < num_layers; ++l) {
-        Layer *layer = &layers[l];
-        printf("-- Layer %d ----------------\n\n", l + 1);
-        
-        if (layer->num_neurons <= 10) {
-            for (int i = 0; i < layer->num_neurons; ++i) {
-                print_neuron(layer->neurons[i], layer->input_size, i);
-            }
-        } else {
-            for (int i = 0; i < 5; ++i) {
-                print_neuron(layer->neurons[i], layer->input_size, i);
-            }
-            printf("    ...\n\n");
-            for (int i = layer->num_neurons - 5; i < layer->num_neurons; ++i) {
-                print_neuron(layer->neurons[i], layer->input_size, i);
-            }
-        }
-        
-        // Print a layer activations
-        printf("    Activations: ");
-        print_vector(layer->activations, layer->num_neurons);
-        printf("\n");
-    }
-}
-
-// Method Box-Muller transform with polar coordinates for generating normal random numbers 
+// Box-Muller transform with polar coordinates
 float random_normal() {
     static int flag = 0;
     static float spare;
@@ -190,15 +71,13 @@ float random_normal() {
     return u1 * s;
 }
 
-void init_weights(float *weights, int size, ActivationFunction activation_function) {
+void init_weights(float *weights, const int size, const ActivationFunction activation_function) {
     float scale = 1.0f;
 
     if (activation_function == RELU || activation_function == LEAKY_RELU) {
-        // He initialization
-        scale = sqrtf(2.0f / size);
+        scale = sqrtf(2.0f / size); // He initialization
     } else {
-        // Xavier initialization
-        scale = sqrtf(1.0f / size);
+        scale = sqrtf(1.0f / size); // Xavier initialization
     }
 
     for (int i = 0; i < size; ++i) {
@@ -206,7 +85,28 @@ void init_weights(float *weights, int size, ActivationFunction activation_functi
     }
 }
 
-void init_layer(Layer *layer, int input_size, int num_neurons, ActivationFunction activation_function) {
+void init_layer(const int input_size, const int num_neurons, const ActivationFunction activation_function) {
+    static int index = 0;
+    if (index == net_num_layers) {
+        fprintf(stderr, "Error: Out of neural network layers.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
+    if (input_size <= 0 || num_neurons <= 0) {
+        fprintf(stderr, "Error: Invalid input size or number of neurons.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
+    if (activation_function < LINEAR || activation_function > SOFTMAX) {
+        fprintf(stderr, "Error: Invalid activation function.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
+    Layer *layer = &layers[index];
+
     layer->num_neurons = num_neurons;
     layer->input_size = input_size;
     layer->activation_function = activation_function;
@@ -215,23 +115,348 @@ void init_layer(Layer *layer, int input_size, int num_neurons, ActivationFunctio
     layer->activations = (float *)malloc(num_neurons * sizeof(float));
     layer->weighted_sums = (float *)malloc(num_neurons * sizeof(float));
 
+    if (!layer->neurons || !layer->activations || !layer->weighted_sums) {
+        fprintf(stderr, "Error: Memory allocation failed for layer components.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
     for (int i = 0; i < num_neurons; ++i) {
         Neuron *neuron = &layer->neurons[i];
 
         neuron->weights = (float *)malloc(input_size * sizeof(float));
-        neuron->velocity = (float *)calloc(input_size, sizeof(float));
         neuron->weight_grads = (float *)calloc(input_size, sizeof(float));
-        
-        // Initialization of neuron weights and bias
-        init_weights(layer->neurons[i].weights, input_size, activation_function);
+        neuron->optimizer_params = NULL;
 
-        // Initialization of neuron bias and bias gradient
+        if (!neuron->weights || !neuron->weight_grads) {
+            fprintf(stderr, "Error: Memory allocation failed for neuron components.\n");
+            destroy_network();
+            exit(EXIT_FAILURE);
+        }
+        
+        init_weights(neuron->weights, input_size, activation_function);
+
         neuron->bias = 0.0f;
         neuron->bias_grad = 0.0f;
     }
+
+    ++index;
+
+    if (index == net_num_layers) {
+        is_network_initialized = 1;
+    }
 }
 
-float weighted_sum(float *weights, float *inputs, int size) {
+void destroy_network(void) {
+    if (!layers) return;
+
+    for (int l = 0 ; l < net_num_layers; ++l) {
+        Layer *layer = &layers[l];
+        
+        for (int i = 0; i < layer->num_neurons; ++i) {
+            Neuron *neuron = &layer->neurons[i];
+
+            if (neuron->weights) free(neuron->weights);
+            if (neuron->weight_grads) free(neuron->weight_grads);
+
+            if (neuron->optimizer_params) {
+                switch (net_optimizer) {
+                    case MOMENTUM:
+                    case ADAGRAD:
+                    case RMSPROP: {
+                        OptParams *params = (OptParams *)neuron->optimizer_params;
+                        if (params->data) free(params->data);
+                        break;
+                    }
+                    case ADAM: {
+                        AdamParams *params = (AdamParams *)neuron->optimizer_params;
+                        if (params->m) free(params->m);
+                        if (params->v) free(params->v);
+                        break;
+                    }
+                    default: break;
+                }
+                free(neuron->optimizer_params);
+            }
+        }
+
+        if (layer->neurons) free(layer->neurons);
+        if (layer->weighted_sums) free(layer->weighted_sums);
+        if (layer->activations) free(layer->activations);
+    }
+
+    free(layers);
+}
+
+void load_network(char *path) {
+    if (!path || strlen(path) == 0) {
+        fprintf(stderr, "Invalid file path.\n");
+        return;
+    }
+
+    FILE *fp = fopen(path, "rb");
+    if (!fp) {
+        fprintf(stderr, "Failed to open file.\n");
+        return;
+    }
+
+    // Read the number of layers
+    fread(&net_num_layers, sizeof(int), 1, fp);
+
+    // Allocate memory for the layers
+    layers = (Layer *)malloc(net_num_layers * sizeof(Layer));
+    if (!layers) {
+        fprintf(stderr, "Failed to allocate memory for layers.\n");
+        fclose(fp);
+        return;
+    }
+
+    for (int l = 0; l < net_num_layers; ++l) {
+        Layer *layer = &layers[l];
+
+        // Read number of neurons and input size
+        fread(&layer->num_neurons, sizeof(int), 1, fp);
+        fread(&layer->input_size, sizeof(int), 1, fp);
+        fread(&layer->activation_function, sizeof(ActivationFunction), 1, fp);
+
+        // Allocate memory for neurons, activations, and weighted_sums
+        layer->neurons = (Neuron *)malloc(layer->num_neurons * sizeof(Neuron));
+        layer->activations = (float *)malloc(layer->num_neurons * sizeof(float));
+        layer->weighted_sums = (float *)malloc(layer->num_neurons * sizeof(float));
+
+        if (!layer->neurons || !layer->activations || !layer->weighted_sums) {
+            fprintf(stderr, "Failed to allocate memory for layer components.\n");
+            fclose(fp);
+            return;
+        }
+
+        for (int i = 0; i < layer->num_neurons; ++i) {
+            Neuron *neuron = &layer->neurons[i];
+
+            // Allocate memory for neuron weights, gradients, and velocity
+            neuron->weights = (float *)malloc(layer->input_size * sizeof(float));
+            neuron->weight_grads = (float *)calloc(layer->input_size, sizeof(float));
+            neuron->optimizer_params = NULL;
+
+            if (!neuron->weights || !neuron->weight_grads) {
+                fprintf(stderr, "Failed to allocate memory for neuron components.\n");
+                fclose(fp);
+                return;
+            }
+
+            neuron->bias_grad = 0.0f;
+
+            // Read neuron data
+            fread(&neuron->bias, sizeof(float), 1, fp);
+            fread(neuron->weights, sizeof(float), layer->input_size, fp);
+        }
+    }
+
+    is_network_initialized = 1;
+    fclose(fp);
+}
+
+void save_network(char *path) {
+    if (!path || strlen(path) == 0) {
+        fprintf(stderr, "Invalid file path.\n");
+        return;
+    }
+
+    FILE *fp = fopen(path, "wb");
+    if (!fp) {
+        fprintf(stderr, "Failed to open file.\n");
+        return;
+    }
+
+    // Write the number of layers
+    fwrite(&net_num_layers, sizeof(int), 1, fp);
+
+    for (int l = 0; l < net_num_layers; ++l) {
+        Layer *layer = &layers[l];
+
+        // Write number of neurons and input size
+        fwrite(&layer->num_neurons, sizeof(int), 1, fp);
+        fwrite(&layer->input_size, sizeof(int), 1, fp);
+        fwrite(&layer->activation_function, sizeof(ActivationFunction), 1, fp);
+
+        for (int i = 0; i < layer->num_neurons; ++i) {
+            Neuron *neuron = &layer->neurons[i];
+
+            // Write neuron data
+            fwrite(&neuron->bias, sizeof(float), 1, fp);
+            fwrite(neuron->weights, sizeof(float), layer->input_size, fp);
+        }
+    }
+
+    fclose(fp);
+}
+
+void print_neuron(const Neuron neuron, const int input_size, const int idx) {
+    int width = 24;
+    printf("    Neuron %d:\n", idx + 1);
+
+    // Print a neuron weights and bias
+    printf("%*s", width, "Weights: ");
+    print_vector(neuron.weights, input_size);
+    printf("%*s%.6f\n\n", width, "Bias: ", neuron.bias);
+
+    // Print a neuron gradients
+    printf("%*s", width, "Weight gradients: ");
+    print_vector(neuron.weight_grads, input_size);
+    printf("%*s%.6f\n\n", width, "Bias gradient: ", neuron.bias_grad);
+}
+
+void print_network(void) {
+    if (!is_network_initialized) {
+        fprintf(stderr, "Error: Network is not initialized.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
+    for (int l = 0; l < net_num_layers; ++l) {
+        Layer *layer = &layers[l];
+        printf("-- Layer %d ----------------\n\n", l + 1);
+        
+        if (layer->num_neurons <= 10) {
+            for (int i = 0; i < layer->num_neurons; ++i) {
+                print_neuron(layer->neurons[i], layer->input_size, i);
+            }
+        } else {
+            for (int i = 0; i < 5; ++i) {
+                print_neuron(layer->neurons[i], layer->input_size, i);
+            }
+            printf("    ...\n\n");
+            for (int i = layer->num_neurons - 5; i < layer->num_neurons; ++i) {
+                print_neuron(layer->neurons[i], layer->input_size, i);
+            }
+        }
+        
+        // Print a layer activations
+        printf("    Activations: ");
+        print_vector(layer->activations, layer->num_neurons);
+        printf("\n");
+    }
+}
+
+void setup_loss_function(const LossFunction loss_function) {
+    if (loss_function < MSE || loss_function > CROSS_ENTROPY) {
+        fprintf(stderr, "Error: Invalid loss function.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
+    net_loss_function = loss_function;
+}
+
+void setup_optimizer(const Optimizer optimizer, const float learning_rate) {
+    if (optimizer < SGD || optimizer > ADAM) {
+        fprintf(stderr, "Error: Invalid optimizer.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
+    if (learning_rate <= 0.0f) {
+        fprintf(stderr, "Error: Learning rate must be positive.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
+    net_optimizer = optimizer;
+    net_learning_rate = learning_rate;
+    
+    if (net_optimizer == SGD) return;
+
+    for (int l = 0; l < net_num_layers; ++l) {
+        Layer *layer = &layers[l];
+
+        for (int i = 0; i < layer->num_neurons; ++i) {
+            Neuron *neuron = &layer->neurons[i];
+
+            switch (net_optimizer) {
+                case MOMENTUM:
+                case ADAGRAD:
+                case RMSPROP: {
+                    OptParams *params = (OptParams *)malloc(sizeof(OptParams));
+                    if (!params) {
+                        fprintf(stderr, "Error: Memory allocation failed for neuron components.\n");
+                        destroy_network();
+                        exit(EXIT_FAILURE);
+                    }
+
+                    params->data = (float *)calloc(layer->input_size, sizeof(float));
+                    if (!params->data) {
+                        fprintf(stderr, "Error: Memory allocation failed for neuron components.\n");
+                        destroy_network();
+                        free(params);
+                        exit(EXIT_FAILURE);
+                    }
+
+                    neuron->optimizer_params = params;
+                    break;
+                }
+
+                case ADAM: {
+                    AdamParams *params = (AdamParams *)malloc(sizeof(AdamParams));
+                    if (!params) {
+                        fprintf(stderr, "Error: Memory allocation failed for neuron components.\n");
+                        destroy_network();
+                        exit(EXIT_FAILURE);
+                    }
+
+                    params->m = (float *)calloc(layer->input_size, sizeof(float));
+                    params->v = (float *)calloc(layer->input_size, sizeof(float));
+                    if (!params->m || !params->v) {
+                        fprintf(stderr, "Error: Memory allocation failed for neuron components.\n");
+                        destroy_network();
+                        free(params);
+                        exit(EXIT_FAILURE);
+                    }
+
+                    neuron->optimizer_params = params;
+                    break;
+                }
+
+                default: break;
+            }
+        }
+    }
+}
+
+float* get_network_predictions(void) {
+    Layer *last_layer = &layers[net_num_layers - 1];
+    float *predictions = (float *)malloc(last_layer->num_neurons * sizeof(float));
+    if (!predictions) {
+        fprintf(stderr, "Error: Memory allocation failed.\n");
+        return NULL;
+    }
+    memcpy(predictions, last_layer->activations, last_layer->num_neurons * sizeof(int));
+    return predictions;
+}
+
+float loss_function(const float *targets) {
+    if (!is_network_initialized) {
+        fprintf(stderr, "Error: Network is not initialized.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
+    if (net_loss_function < MSE || net_loss_function > CROSS_ENTROPY) {
+        fprintf(stderr, "Error: Loss function is not initialized.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
+    Layer *last_layer = &layers[net_num_layers - 1];
+
+    switch (net_loss_function) {
+        case MSE: return mse(last_layer->activations, targets, last_layer->num_neurons);
+        case CROSS_ENTROPY: return cross_entropy(last_layer->activations, targets, last_layer->num_neurons);
+    }
+
+    return 0.0f;
+}
+
+float weighted_sum(float *weights, const float *inputs, const int size) {
     float sum = 0.0f;
     for (int i = 0; i < size; ++i) {
         sum += inputs[i] * weights[i];
@@ -239,8 +464,14 @@ float weighted_sum(float *weights, float *inputs, int size) {
     return sum;
 }
 
-void forward(Layer *layers, float *inputs, int num_layers) {
-    for (int l = 0 ; l < num_layers; ++l) {
+void forward(const float *inputs) {
+    if (!is_network_initialized) {
+        fprintf(stderr, "Error: Network is not initialized.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
+    for (int l = 0 ; l < net_num_layers; ++l) {
         Layer *layer = &layers[l];
         
         for (int i = 0; i < layer->num_neurons; ++i) {
@@ -255,22 +486,35 @@ void forward(Layer *layers, float *inputs, int num_layers) {
             if (layer->activation_function != SOFTMAX) {
                 layer->activations[i] = activation_function(layer->activation_function, w_sum);
 
-            } else if (l < num_layers - 1) {
-                destroy_network(layers, num_layers);
+            } else if (l < net_num_layers - 1) {
+                fprintf(stderr, "Error: Softmax should only be applied to the output layer.\n");
+                destroy_network();
                 exit(EXIT_FAILURE);
             }
         }
     }
 
     // Apply softmax to the output layer
-    Layer *last_layer = &layers[num_layers - 1];
+    Layer *last_layer = &layers[net_num_layers - 1];
     if (last_layer->activation_function == SOFTMAX) {
         softmax(last_layer->weighted_sums, last_layer->activations, last_layer->num_neurons);
     }
 }
 
-void compute_gradients(Layer *layers, float *inputs, float *targets, int num_layers, LossFunction loss_function) {
-    Layer *last_layer = &layers[num_layers - 1];
+void compute_gradients(const float *inputs, const float *targets) {
+    if (!is_network_initialized) {
+        fprintf(stderr, "Error: Network is not initialized.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
+    if (net_loss_function < MSE || net_loss_function > CROSS_ENTROPY) {
+        fprintf(stderr, "Error: Loss function is not initialized.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
+    Layer *last_layer = &layers[net_num_layers - 1];
 
     float *gradients = (float *)malloc(layers[0].num_neurons * sizeof(float));
     float *next_gradients = (float *)malloc(layers[0].num_neurons * sizeof(float));
@@ -280,29 +524,30 @@ void compute_gradients(Layer *layers, float *inputs, float *targets, int num_lay
         Neuron *neuron = &last_layer->neurons[i];
 
         // Calculation of gradients for the last layer
-        if (loss_function == MSE && last_layer->activation_function != SOFTMAX) {
+        if (net_loss_function == MSE && last_layer->activation_function != SOFTMAX) {
             float loss = last_layer->activations[i] - targets[i];
             float activation_derivative = activation_function_derivative(last_layer->activation_function, last_layer->weighted_sums[i]);
             gradients[i] = loss * activation_derivative;
 
-        } else if (loss_function == CROSS_ENTROPY && last_layer->activation_function == SOFTMAX) {
+        } else if (net_loss_function == CROSS_ENTROPY && last_layer->activation_function == SOFTMAX) {
             gradients[i] = last_layer->activations[i] - targets[i];
 
         } else {
-            destroy_network(layers, num_layers);
+            fprintf(stderr, "Error: Unsupported loss function or activation function combination.\n");
+            destroy_network();
             exit(EXIT_FAILURE);
         }
 
         // Calculation of gradients of weights
         for (int j = 0; j < last_layer->input_size; ++j) {
-            neuron->weight_grads[j] += gradients[i] * layers[num_layers - 2].activations[j];
+            neuron->weight_grads[j] += gradients[i] * layers[net_num_layers - 2].activations[j];
         }
 
         neuron->bias_grad += gradients[i];
     }
-
+    
     // Backpropagation
-    for (int l = num_layers - 2; l >= 0; --l) {
+    for (int l = net_num_layers - 2; l >= 0; --l) {
         Layer *layer = &layers[l];
         Layer *next_layer = &layers[l + 1];
 
@@ -336,21 +581,46 @@ void compute_gradients(Layer *layers, float *inputs, float *targets, int num_lay
     free(next_gradients);
 }
 
-void update_weights(Layer *layers, int num_layers, float learning_rate, Optimizer optimizer) {
-    for (int l = 0 ; l < num_layers; ++l) {
+void update_weights(void) {
+    if (!is_network_initialized) {
+        fprintf(stderr, "Error: Network is not initialized.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
+    static int t = 1;
+
+    for (int l = 0 ; l < net_num_layers; ++l) {
         Layer *layer = &layers[l];
         
         for (int i = 0; i < layer->num_neurons; ++i) {
             Neuron *neuron = &layer->neurons[i];
 
-            apply_optimizer(optimizer, neuron->weights, neuron->weight_grads, neuron->velocity, layer->input_size, learning_rate);
-            neuron->bias -= learning_rate * neuron->bias_grad;
+            optimize(
+                net_optimizer,
+                neuron->optimizer_params,
+                neuron->weights,
+                neuron->weight_grads,
+                layer->input_size,
+                net_learning_rate,
+                t
+            );
+
+            neuron->bias -= net_learning_rate * neuron->bias_grad;
         }
     }
+
+    ++t;
 }
 
-void zero_gradients(Layer *layers, int num_layers) {
-    for (int l = 0 ; l < num_layers; ++l) {
+void zero_gradients(void) {
+    if (!is_network_initialized) {
+        fprintf(stderr, "Error: Network is not initialized.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
+    for (int l = 0 ; l < net_num_layers; ++l) {
         Layer *layer = &layers[l];
 
         for (int i = 0; i < layer->num_neurons; ++i) {

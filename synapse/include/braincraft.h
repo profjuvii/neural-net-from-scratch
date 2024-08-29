@@ -5,33 +5,22 @@
 #include "losses.h"
 #include "optimizers.h"
 
-typedef struct {
-    float *weights;
-    float *weight_grads;
-    float bias;
-    float bias_grad;
-    float *velocity;
-} Neuron;
+void create_network(const int num_layers);
+void init_layer(const int input_size, const int num_neurons, const ActivationFunction activation_function);
+void destroy_network(void);
+void load_network(char *path);
+void save_network(char *path);
+void print_network(void);
 
-typedef struct {
-    Neuron *neurons;
-    float *activations;
-    int num_neurons;
-    int input_size;
-    float *weighted_sums;
-    ActivationFunction activation_function;
-} Layer;
+void setup_loss_function(const LossFunction loss_function);
+void setup_optimizer(const Optimizer optimizer, const float learning_rate);
 
-Layer *create_network(int num_layers);
-void destroy_network(Layer *layers, int num_layers);
-Layer *load_network(int *num_layers, char *path);
-void save_network(Layer *layers, int num_layers, char *path);
-void print_network(Layer *layers, int num_layers);
+float* get_network_predictions(void);
+float loss_function(const float *targets);
 
-void init_layer(Layer *layer, int input_size, int num_neurons, ActivationFunction activation_function);
-void forward(Layer *layers, float *inputs, int num_layers);
-void compute_gradients(Layer *layers, float *inputs, float *targets, int num_layers, LossFunction loss_function);
-void update_weights(Layer *layers, int num_layers, float learning_rate, Optimizer optimizer);
-void zero_gradients(Layer *layers, int num_layers);
+void forward(const float *inputs);
+void compute_gradients(const float *inputs, const float *targets);
+void update_weights(void);
+void zero_gradients(void);
 
 #endif
