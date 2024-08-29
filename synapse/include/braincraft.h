@@ -8,8 +8,8 @@
 void create_network(const int num_layers);
 void init_layer(const int input_size, const int num_neurons, const ActivationFunction activation_function);
 void destroy_network(void);
-void load_network(char *path);
-void save_network(char *path);
+void load_network(const char *path);
+void save_network(const char *path);
 void print_network(void);
 
 void setup_loss_function(const LossFunction loss_function);

@@ -39,7 +39,7 @@ void create_network(const int num_layers) {
 
     layers = (Layer *)malloc(num_layers * sizeof(Layer));
     if (!layers) {
-        fprintf(stderr, "Error: Memory allocation failed.\n");
+        fprintf(stderr, "Error: Memory allocation failed for layers.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -188,15 +188,21 @@ void destroy_network(void) {
     free(layers);
 }
 
-void load_network(char *path) {
+void load_network(const char *path) {
+    if (is_network_initialized) {
+        fprintf(stderr, "Error: Network is initialized.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
     if (!path || strlen(path) == 0) {
-        fprintf(stderr, "Invalid file path.\n");
+        fprintf(stderr, "Error: Invalid file path.\n");
         return;
     }
 
     FILE *fp = fopen(path, "rb");
     if (!fp) {
-        fprintf(stderr, "Failed to open file.\n");
+        fprintf(stderr, "Error: Failed to open file.\n");
         return;
     }
 
@@ -206,7 +212,7 @@ void load_network(char *path) {
     // Allocate memory for the layers
     layers = (Layer *)malloc(net_num_layers * sizeof(Layer));
     if (!layers) {
-        fprintf(stderr, "Failed to allocate memory for layers.\n");
+        fprintf(stderr, "Error: Memory allocation failed for layers.\n");
         fclose(fp);
         return;
     }
@@ -225,7 +231,9 @@ void load_network(char *path) {
         layer->weighted_sums = (float *)malloc(layer->num_neurons * sizeof(float));
 
         if (!layer->neurons || !layer->activations || !layer->weighted_sums) {
-            fprintf(stderr, "Failed to allocate memory for layer components.\n");
+            fprintf(stderr, "Error: Memory allocation failed for layer components.\n");
+            destroy_network();
+            exit(EXIT_FAILURE);
             fclose(fp);
             return;
         }
@@ -239,7 +247,9 @@ void load_network(char *path) {
             neuron->optimizer_params = NULL;
 
             if (!neuron->weights || !neuron->weight_grads) {
-                fprintf(stderr, "Failed to allocate memory for neuron components.\n");
+                fprintf(stderr, "Error: Memory allocation failed for neuron components.\n");
+                destroy_network();
+                exit(EXIT_FAILURE);
                 fclose(fp);
                 return;
             }
@@ -256,15 +266,21 @@ void load_network(char *path) {
     fclose(fp);
 }
 
-void save_network(char *path) {
+void save_network(const char *path) {
+    if (!is_network_initialized) {
+        fprintf(stderr, "Error: Network is not initialized.\n");
+        destroy_network();
+        exit(EXIT_FAILURE);
+    }
+
     if (!path || strlen(path) == 0) {
-        fprintf(stderr, "Invalid file path.\n");
+        fprintf(stderr, "Error: Invalid file path.\n");
         return;
     }
 
     FILE *fp = fopen(path, "wb");
     if (!fp) {
-        fprintf(stderr, "Failed to open file.\n");
+        fprintf(stderr, "Error: Failed to open file.\n");
         return;
     }
 

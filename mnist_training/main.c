@@ -3,7 +3,7 @@
 #include <synapse.h>
 #include <time.h>
 
-int main() {
+int main(void) {
     srand((unsigned int)time(NULL));
 
     // Data preparation
