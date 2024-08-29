@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -I../synapse/include -I/opt/homebrew/Cellar/libpng/1.6.43/include -Wall -Wextra -std=c11
-LDFLAGS = -L../synapse/lib -L/opt/homebrew/Cellar/libpng/1.6.43/lib
+CFLAGS = -I../synapse/1.0.0/include -I/opt/homebrew/Cellar/libpng/1.6.43/include -Wall -Wextra -std=c11
+LDFLAGS = -L../synapse/1.0.0/lib -L/opt/homebrew/Cellar/libpng/1.6.43/lib
 LIBS = -lsynapse -lpng
 
 TARGET = classifier
