@@ -58,11 +58,11 @@ float leaky_relu_derivative(float x) {
 
 float activation_function(const ActivationFunction activation_function, const float x) {
     switch (activation_function) {
-        case LINEAR: return x;
-        case SIGMOID: return sigmoid(x);
-        case TANH: return tanhf(x);
-        case RELU: return relu(x);
-        case LEAKY_RELU: return leaky_relu(x);
+        case Linear: return x;
+        case Sigmoid: return sigmoid(x);
+        case Tanh: return tanhf(x);
+        case ReLU: return relu(x);
+        case LeakyReLU: return leaky_relu(x);
         default: break;
     }
 
@@ -71,11 +71,11 @@ float activation_function(const ActivationFunction activation_function, const fl
 
 float activation_function_derivative(const ActivationFunction activation_function, const float x) {
     switch (activation_function) {
-        case LINEAR: return 1.0f;
-        case SIGMOID: return sigmoid_derivative(x);
-        case TANH: return tanh_derivative(x);
-        case RELU: return relu_derivative(x);
-        case LEAKY_RELU: return leaky_relu_derivative(x);
+        case Linear: return 1.0f;
+        case Sigmoid: return sigmoid_derivative(x);
+        case Tanh: return tanh_derivative(x);
+        case ReLU: return relu_derivative(x);
+        case LeakyReLU: return leaky_relu_derivative(x);
         default: break;
     }
 

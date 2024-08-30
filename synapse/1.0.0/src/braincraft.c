@@ -74,7 +74,7 @@ float random_normal() {
 void init_weights(float *weights, const int size, const ActivationFunction activation_function) {
     float scale = 1.0f;
 
-    if (activation_function == RELU || activation_function == LEAKY_RELU) {
+    if (activation_function == ReLU || activation_function == LeakyReLU) {
         scale = sqrtf(2.0f / size); // He initialization
     } else {
         scale = sqrtf(1.0f / size); // Xavier initialization
@@ -99,7 +99,7 @@ void init_layer(const int input_size, const int num_neurons, const ActivationFun
         exit(EXIT_FAILURE);
     }
 
-    if (activation_function < LINEAR || activation_function > SOFTMAX) {
+    if (activation_function < Linear || activation_function > Softmax) {
         fprintf(stderr, "Error: Invalid activation function.\n");
         destroy_network();
         exit(EXIT_FAILURE);
@@ -161,14 +161,14 @@ void destroy_network(void) {
 
             if (neuron->optimizer_params) {
                 switch (net_optimizer) {
-                    case MOMENTUM:
-                    case ADAGRAD:
-                    case RMSPROP: {
+                    case Momentum:
+                    case Adagrad:
+                    case RMSprop: {
                         OptParams *params = (OptParams *)neuron->optimizer_params;
                         if (params->data) free(params->data);
                         break;
                     }
-                    case ADAM: {
+                    case Adam: {
                         AdamParams *params = (AdamParams *)neuron->optimizer_params;
                         if (params->m) free(params->m);
                         if (params->v) free(params->v);
@@ -355,7 +355,7 @@ void print_network(void) {
 }
 
 void setup_loss_function(const LossFunction loss_function) {
-    if (loss_function < MSE || loss_function > CROSS_ENTROPY) {
+    if (loss_function < MSE || loss_function > CrossEntropy) {
         fprintf(stderr, "Error: Invalid loss function.\n");
         destroy_network();
         exit(EXIT_FAILURE);
@@ -365,7 +365,7 @@ void setup_loss_function(const LossFunction loss_function) {
 }
 
 void setup_optimizer(const Optimizer optimizer, const float learning_rate) {
-    if (optimizer < SGD || optimizer > ADAM) {
+    if (optimizer < SGD || optimizer > Adam) {
         fprintf(stderr, "Error: Invalid optimizer.\n");
         destroy_network();
         exit(EXIT_FAILURE);
@@ -389,9 +389,9 @@ void setup_optimizer(const Optimizer optimizer, const float learning_rate) {
             Neuron *neuron = &layer->neurons[i];
 
             switch (net_optimizer) {
-                case MOMENTUM:
-                case ADAGRAD:
-                case RMSPROP: {
+                case Momentum:
+                case Adagrad:
+                case RMSprop: {
                     OptParams *params = (OptParams *)malloc(sizeof(OptParams));
                     if (!params) {
                         fprintf(stderr, "Error: Memory allocation failed for neuron components.\n");
@@ -411,7 +411,7 @@ void setup_optimizer(const Optimizer optimizer, const float learning_rate) {
                     break;
                 }
 
-                case ADAM: {
+                case Adam: {
                     AdamParams *params = (AdamParams *)malloc(sizeof(AdamParams));
                     if (!params) {
                         fprintf(stderr, "Error: Memory allocation failed for neuron components.\n");
@@ -456,7 +456,7 @@ float loss_function(const float *targets) {
         exit(EXIT_FAILURE);
     }
 
-    if (net_loss_function < MSE || net_loss_function > CROSS_ENTROPY) {
+    if (net_loss_function < MSE || net_loss_function > CrossEntropy) {
         fprintf(stderr, "Error: Loss function is not initialized.\n");
         destroy_network();
         exit(EXIT_FAILURE);
@@ -466,7 +466,7 @@ float loss_function(const float *targets) {
 
     switch (net_loss_function) {
         case MSE: return mse(last_layer->activations, targets, last_layer->num_neurons);
-        case CROSS_ENTROPY: return cross_entropy(last_layer->activations, targets, last_layer->num_neurons);
+        case CrossEntropy: return cross_entropy(last_layer->activations, targets, last_layer->num_neurons);
     }
 
     return 0.0f;
@@ -499,7 +499,7 @@ void forward(const float *inputs) {
             layer->weighted_sums[i] = w_sum;
 
             // Activation function application
-            if (layer->activation_function != SOFTMAX) {
+            if (layer->activation_function != Softmax) {
                 layer->activations[i] = activation_function(layer->activation_function, w_sum);
 
             } else if (l < net_num_layers - 1) {
@@ -512,7 +512,7 @@ void forward(const float *inputs) {
 
     // Apply softmax to the output layer
     Layer *last_layer = &layers[net_num_layers - 1];
-    if (last_layer->activation_function == SOFTMAX) {
+    if (last_layer->activation_function == Softmax) {
         softmax(last_layer->weighted_sums, last_layer->activations, last_layer->num_neurons);
     }
 }
@@ -524,7 +524,7 @@ void compute_gradients(const float *inputs, const float *targets) {
         exit(EXIT_FAILURE);
     }
 
-    if (net_loss_function < MSE || net_loss_function > CROSS_ENTROPY) {
+    if (net_loss_function < MSE || net_loss_function > CrossEntropy) {
         fprintf(stderr, "Error: Loss function is not initialized.\n");
         destroy_network();
         exit(EXIT_FAILURE);
@@ -540,12 +540,12 @@ void compute_gradients(const float *inputs, const float *targets) {
         Neuron *neuron = &last_layer->neurons[i];
 
         // Calculation of gradients for the last layer
-        if (net_loss_function == MSE && last_layer->activation_function != SOFTMAX) {
+        if (net_loss_function == MSE && last_layer->activation_function != Softmax) {
             float loss = last_layer->activations[i] - targets[i];
             float activation_derivative = activation_function_derivative(last_layer->activation_function, last_layer->weighted_sums[i]);
             gradients[i] = loss * activation_derivative;
 
-        } else if (net_loss_function == CROSS_ENTROPY && last_layer->activation_function == SOFTMAX) {
+        } else if (net_loss_function == CrossEntropy && last_layer->activation_function == Softmax) {
             gradients[i] = last_layer->activations[i] - targets[i];
 
         } else {

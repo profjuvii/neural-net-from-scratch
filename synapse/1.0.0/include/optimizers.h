@@ -3,19 +3,15 @@
 
 typedef enum {
     SGD,
-    MOMENTUM,
-    ADAGRAD,
-    RMSPROP,
-    ADAM
+    Momentum,
+    Adagrad,
+    RMSprop,
+    Adam
 } Optimizer;
 
 typedef struct {
     float *data;
 } OptParams;
-
-typedef OptParams MomentumParams;
-typedef OptParams AdaGradParams;
-typedef OptParams RMSpropParams;
 
 typedef struct {
     float *m;

@@ -3,7 +3,7 @@
 
 typedef enum {
     MSE,
-    CROSS_ENTROPY
+    CrossEntropy
 } LossFunction;
 
 float mse(const float *predicts, const float *targets, const int n);

@@ -2,12 +2,12 @@
 #define ACTIVATORS_H
 
 typedef enum {
-    LINEAR,
-    SIGMOID,
-    TANH,
-    RELU,
-    LEAKY_RELU,
-    SOFTMAX
+    Linear,
+    Sigmoid,
+    Tanh,
+    ReLU,
+    LeakyReLU,
+    Softmax
 } ActivationFunction;
 
 void set_leaky_relu_param(const float alpha);

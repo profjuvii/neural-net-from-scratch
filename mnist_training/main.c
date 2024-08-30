@@ -25,12 +25,12 @@ int main(void) {
 
     create_network(num_layers);
 
-    init_layer(input_size, 128, RELU);
-    init_layer(128, 64, RELU);
-    init_layer(64, num_classes, SOFTMAX);
+    init_layer(input_size, 128, ReLU);
+    init_layer(128, 64, ReLU);
+    init_layer(64, num_classes, Softmax);
 
-    setup_loss_function(CROSS_ENTROPY);
-    setup_optimizer(ADAM, 0.001f);
+    setup_loss_function(CrossEntropy);
+    setup_optimizer(Adam, 0.001f);
 
     // Model training
     int num_epochs = 100;

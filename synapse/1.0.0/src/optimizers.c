@@ -107,18 +107,18 @@ void optimize(
             sgd(weights, gradients, size, learning_rate);
             break;
         }
-        case MOMENTUM:
-        case ADAGRAD:
-        case RMSPROP: {
+        case Momentum:
+        case Adagrad:
+        case RMSprop: {
             OptParams *params = (OptParams *)optimizer_params;
             switch (optimizer) {
-                case MOMENTUM:
+                case Momentum:
                     momentum(weights, gradients, params->data, size, learning_rate);
                     break;
-                case ADAGRAD:
+                case Adagrad:
                     adagrad(weights, gradients, params->data, size, learning_rate);
                     break;
-                case RMSPROP:
+                case RMSprop:
                     rmsprop(weights, gradients, params->data, size, learning_rate);
                     break;
                 default:
@@ -126,7 +126,7 @@ void optimize(
             }
             break;
         }
-        case ADAM: {
+        case Adam: {
             AdamParams *params = (AdamParams *)optimizer_params;
             adam(
                 weights,
