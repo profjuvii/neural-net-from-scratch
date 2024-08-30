@@ -17,6 +17,6 @@ void set_mean_std_params(const float mean, const float std);
 
 DataLoader* create_dataloader(char *dataset_path, const int batch_size, const int input_size);
 void destroy_dataloader(DataLoader *dataloader);
-int get_next_batch(DataLoader *dataloader, const int num_classes, const int flag);
+int get_next_batch(DataLoader *dataloader, const int num_classes);
 
 #endif

@@ -6,11 +6,14 @@
 #include "image2vector.h"
 #include "utils.h"
 
-static float img_mean_param = 0.5f;
-static float img_std_param = 0.5f;
+static float img_mean_param = 0.0f;
+static float img_std_param = 0.0f;
 
 void set_mean_std_params(const float mean, const float std) {
-    if (std == 0.0f) return;
+    if (std <= 0.0f) {
+        fprintf(stderr, "Error: Standard deviation must be positive and non-zero.\n");
+        return;
+    }
     img_mean_param = mean;
     img_std_param = std;
 }
@@ -61,7 +64,7 @@ DataLoader* create_dataloader(char* dataset_path, const int batch_size, const in
     return dataloader;
 }
 
-int get_next_batch(DataLoader *dataloader, const int num_classes, const int flag) {
+int get_next_batch(DataLoader *dataloader, const int num_classes) {
     int images_per_class = dataloader->batch_size / num_classes;
     int remaining_images = dataloader->batch_size % num_classes;
 
@@ -103,7 +106,7 @@ int get_next_batch(DataLoader *dataloader, const int num_classes, const int flag
 
             image2vector(file_path, dataloader->batch[batch_index].features);
             
-            if (flag) {
+            if (img_std_param > 0.0f) {
                 float mean_param = img_mean_param;
                 float std_param = img_std_param;
                 normalize_vector(dataloader->batch[batch_index].features, dataloader->input_size, mean_param, std_param);

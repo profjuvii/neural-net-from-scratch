@@ -14,8 +14,11 @@ int main(void) {
     char *test_path = "/Users/profjuvi/Datasets/mnist_png/test";
 
     int batch_size = 64;
+
     DataLoader *dataloader_train = create_dataloader(train_path, batch_size, input_size);
     DataLoader *dataloader_test = create_dataloader(test_path, batch_size, input_size);
+
+    set_mean_std_params(0.5f, 0.5f);
 
     // Initialization of the neural network
     int num_layers = 3;
@@ -35,7 +38,7 @@ int main(void) {
     float *targets = (float *)calloc(num_classes, sizeof(float));
 
     for (int epoch = 0; epoch <= num_epochs; ++epoch) {
-        get_next_batch(dataloader_train, num_classes, 1);
+        get_next_batch(dataloader_train, num_classes);
         float total_loss = 0.0f;
 
         for (int i = 0; i < batch_size; ++i) {
@@ -66,7 +69,7 @@ int main(void) {
     }
 
     // Model testing
-    get_next_batch(dataloader_test, num_classes, 1);
+    get_next_batch(dataloader_test, num_classes);
     float correct_predicts = 0.0f;
 
     for (int i = 0; i < batch_size; ++i) {
@@ -92,7 +95,7 @@ int main(void) {
     printf("Accuracy: %.1f%%\n", accuracy);
 
     if (accuracy >= 90.0f) {
-        save_network("/Users/profjuvi/neural-net-from-scratch/models/mnist_classifier*.bin");
+        save_network("../models/mnist_classifier*.bin");
         printf("Model saved successfully.\n");
     }
 
